@@ -1,7 +1,12 @@
-export interface DatadogConfig {
+export interface DatadogCredentials {
   apiKey: string;
   appKey: string;
+}
+
+export interface DatadogConfig {
   baseUrl?: string;
+  apiKey?: string;
+  appKey?: string;
 }
 
 export interface IncidentioConfig {
@@ -11,7 +16,7 @@ export interface IncidentioConfig {
 
 export interface MigrationMapping {
   pagerdutyService?: string;
-  incidentioTeam?: string;
+  incidentioTeam?: string | null;
   webhookName?: string;
 }
 
@@ -35,9 +40,17 @@ export enum MigrationType {
   REMOVE_PAGERDUTY = 'remove_pagerduty',
 }
 
+export interface FilterOptions {
+  tags?: string[];
+  namePattern?: RegExp;
+  messagePattern?: RegExp;
+}
+
 export interface MigrationOptions {
   dryRun?: boolean;
-  migrationMappingFile?: string;
   type: MigrationType;
   singleWebhook?: boolean;
+  verbose?: boolean;
+  filter?: FilterOptions;
+  validateMappings?: boolean;
 }

@@ -1,23 +1,28 @@
 import { Command } from 'commander';
 import inquirer from 'inquirer';
-import { kleur } from 'kleur';
+import kleur from 'kleur';
 import ora from 'ora';
 
 import { DatadogService } from '../services/datadog';
 import { MigrationService } from '../services/migration';
-import { loadConfig, createDefaultConfig } from '../utils/config';
+import {loadConfig, createDefaultConfig, debug} from '../utils/config';
+import { formatMessageDiff } from '../utils/diff';
 import { DatadogConfig, IncidentioConfig, MigrationType } from '../types';
 
 export function registerAddIncidentioCommand(program: Command): void {
   program
     .command('add-incidentio')
     .description('Add incident.io webhooks to monitors that use PagerDuty')
-    .option('-k, --api-key <key>', 'Datadog API key')
-    .option('-a, --app-key <key>', 'Datadog App key')
-    .option('-c, --config <path>', 'Path to config file')
-    .option('-m, --mapping <path>', 'Path to mapping file')
+    .requiredOption('-k, --api-key <key>', 'Datadog API key')
+    .requiredOption('-a, --app-key <key>', 'Datadog App key')
+    .option('-c, --config <path>', 'Path to config file (will be created if it doesn\'t exist)')
     .option('-d, --dry-run', 'Dry run mode (no actual changes)')
     .option('-s, --single-webhook', 'Use a single webhook for all monitors')
+    .option('-v, --verbose', 'Show detailed output including unchanged monitors', true)
+    .option('-t, --tags <tags>', 'Filter monitors by tags (comma-separated)')
+    .option('-n, --name <pattern>', 'Filter monitors by name pattern')
+    .option('--message <pattern>', 'Filter monitors by message pattern')
+    .option('--validate-mappings', 'Validate all PagerDuty services have mappings')
     .action(async (options) => {
       let datadogConfig: DatadogConfig;
       let incidentioConfig: IncidentioConfig;
@@ -26,11 +31,24 @@ export function registerAddIncidentioCommand(program: Command): void {
       try {
         // Load config if provided, otherwise prompt for credentials
         if (options.config) {
-          const config = loadConfig(options.config);
-          datadogConfig = config.datadogConfig;
-          incidentioConfig = config.incidentioConfig;
-          mappings = config.mappings;
-        } else {
+          try {
+            const config = loadConfig(options.config);
+            datadogConfig = config.datadogConfig;
+            incidentioConfig = config.incidentioConfig;
+            mappings = config.mappings;
+          } catch (err) {
+            // If config file doesn't exist, but API keys are provided, continue without it
+            if (options.apiKey && options.appKey) {
+              console.log(kleur.yellow(`Config file ${options.config} not found, but using provided API keys.`));
+            } else {
+              // Re-throw if we don't have API keys
+              throw err;
+            }
+          }
+        }
+        
+        // If not loaded from config, create default or use command line options
+        if (!datadogConfig) {
           const defaultConfig = createDefaultConfig();
           
           // Override with CLI options if provided
@@ -96,8 +114,12 @@ export function registerAddIncidentioCommand(program: Command): void {
           incidentioConfig = defaultConfig.incidentioConfig;
         }
 
-        // Create Datadog service
-        const datadogService = new DatadogService(datadogConfig);
+        // Create Datadog service with credentials
+        const credentials = {
+          apiKey: options.apiKey,
+          appKey: options.appKey
+        };
+        const datadogService = new DatadogService(datadogConfig, credentials);
         
         // Verify connection
         const spinner = ora('Connecting to Datadog API').start();
@@ -110,21 +132,30 @@ export function registerAddIncidentioCommand(program: Command): void {
           process.exit(1);
         }
 
-        // Create migration service
+        // Create migration service with dryRun explicitly set
+        const dryRunMode = options.dryRun === true;
+        debug(`Using dry run mode: ${dryRunMode ? 'YES' : 'NO'}`);
+        
         const migrationService = new MigrationService(
           datadogService,
           incidentioConfig,
           mappings,
-          { dryRun: options.dryRun }
+          { dryRun: dryRunMode }
         );
 
         // Perform migration
         spinner.start(options.dryRun ? 'Simulating migration...' : 'Migrating monitors...');
         
+        // Prepare filter options if specified
+        const filterOptions = prepareFilterOptions(options);
+        
         const result = await migrationService.migrateMonitors({
           type: MigrationType.ADD_INCIDENTIO_WEBHOOK,
-          dryRun: options.dryRun,
-          singleWebhook: options.singleWebhook
+          dryRun: dryRunMode,
+          singleWebhook: options.singleWebhook,
+          verbose: options.verbose,
+          filter: filterOptions,
+          validateMappings: options.validateMappings
         });
 
         spinner.succeed(options.dryRun ? 'Simulation complete' : 'Migration complete');
@@ -134,6 +165,24 @@ export function registerAddIncidentioCommand(program: Command): void {
         console.log(`Processed: ${kleur.blue(result.processed)}`);
         console.log(`Updated: ${kleur.green(result.updated)}`);
         console.log(`Unchanged: ${kleur.yellow(result.unchanged)}`);
+        
+        // Show changes
+        if (result.changes.length > 0) {
+          console.log(kleur.bold('\nChanges:'));
+          for (const change of result.changes) {
+            if (change.before !== change.after) {
+              console.log(kleur.bold(`\nMonitor #${change.id}: ${change.name}`));
+              console.log(kleur.yellow('Before:'));
+              console.log(`  ${change.before}`);
+              console.log(kleur.green('After:'));
+              console.log(`  ${formatMessageDiff(change.before, change.after, 'add')}`);
+            } else if (options.verbose && change.reason) {
+              console.log(kleur.bold(`\nMonitor #${change.id}: ${change.name}`));
+              console.log(`  ${kleur.gray(`[Unchanged - ${change.reason}]`)}`);
+              console.log(`  ${change.before}`);
+            }
+          }
+        }
         
         if (result.errors.length > 0) {
           console.log(kleur.red(`\nErrors (${result.errors.length}):`));
@@ -151,4 +200,29 @@ export function registerAddIncidentioCommand(program: Command): void {
         process.exit(1);
       }
     });
+}
+
+/**
+ * Prepare filter options from command arguments
+ */
+function prepareFilterOptions(options: any): FilterOptions | undefined {
+  if (!options.tags && !options.name && !options.message) {
+    return undefined;
+  }
+  
+  const filterOptions: FilterOptions = {};
+  
+  if (options.tags) {
+    filterOptions.tags = options.tags.split(',').map((t: string) => t.trim());
+  }
+  
+  if (options.name) {
+    filterOptions.namePattern = new RegExp(options.name, 'i');
+  }
+  
+  if (options.message) {
+    filterOptions.messagePattern = new RegExp(options.message, 'i');
+  }
+  
+  return filterOptions;
 }

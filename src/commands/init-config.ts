@@ -2,15 +2,19 @@ import { Command } from 'commander';
 import inquirer from 'inquirer';
 import fs from 'fs';
 import path from 'path';
-import { kleur } from 'kleur';
+import kleur from 'kleur';
 import ora from 'ora';
 
-import { createDefaultConfig } from '../utils/config';
+import { createDefaultConfig, updateConfigMappings } from '../utils/config';
+import { DatadogService } from '../services/datadog';
+import { DatadogMonitor } from '../types';
 
 export function registerInitConfigCommand(program: Command): void {
   program
     .command('init')
     .description('Initialize a new configuration file')
+    .requiredOption('-k, --api-key <key>', 'Datadog API key')
+    .requiredOption('-a, --app-key <key>', 'Datadog App key')
     .option('-p, --path <path>', 'Path to save the config file', './config.json')
     .action(async (options) => {
       try {
@@ -35,24 +39,7 @@ export function registerInitConfigCommand(program: Command): void {
         // Create default config
         const defaultConfig = createDefaultConfig();
         
-        // Ask for Datadog credentials
-        const datadogAnswers = await inquirer.prompt([
-          {
-            type: 'input',
-            name: 'apiKey',
-            message: 'Enter your Datadog API key:',
-            validate: (input) => input ? true : 'API key is required'
-          },
-          {
-            type: 'input',
-            name: 'appKey',
-            message: 'Enter your Datadog App key:',
-            validate: (input) => input ? true : 'App key is required'
-          }
-        ]);
-        
-        defaultConfig.datadogConfig.apiKey = datadogAnswers.apiKey;
-        defaultConfig.datadogConfig.appKey = datadogAnswers.appKey;
+        // Datadog credentials will be provided as CLI arguments when running commands
         
         // Ask about incident.io configuration
         const { webhookStrategy } = await inquirer.prompt([
@@ -149,6 +136,67 @@ export function registerInitConfigCommand(program: Command): void {
           
           fs.writeFileSync(configPath, JSON.stringify(defaultConfig, null, 2));
           spinner.succeed(`Configuration file created at ${options.path}`);
+          
+          // Now detect PagerDuty services automatically
+          spinner.start('Detecting PagerDuty services from monitors');
+          
+          try {
+            // Create Datadog service with credentials
+            const credentials = {
+              apiKey: options.apiKey,
+              appKey: options.appKey
+            };
+            
+            const datadogService = new DatadogService(defaultConfig.datadogConfig, credentials);
+            
+            // Get all monitors to detect PagerDuty services
+            const monitors = await datadogService.getMonitors();
+            
+            // Extract all PagerDuty services
+            const pdPattern = /@pagerduty-(\S+)/g;
+            const services = new Set<string>();
+            
+            for (const monitor of monitors) {
+              const matches = [...monitor.message.matchAll(pdPattern)];
+              for (const match of matches) {
+                services.add(match[1]);
+              }
+            }
+            
+            const pagerDutyServices = [...services].sort();
+            spinner.succeed(`Detected ${pagerDutyServices.length} PagerDuty services`);
+            
+            if (pagerDutyServices.length > 0) {
+              // Create mappings for detected services (excluding ones already manually added)
+              const existingServices = new Set(defaultConfig.mappings.map(m => m.pagerdutyService));
+              const newMappings = [];
+              
+              for (const service of pagerDutyServices) {
+                if (!existingServices.has(service)) {
+                  defaultConfig.mappings.push({
+                    pagerdutyService: service,
+                    incidentioTeam: null // Placeholder for user to fill in
+                  });
+                  newMappings.push(service);
+                }
+              }
+              
+              // Update the config file with the new mappings
+              fs.writeFileSync(configPath, JSON.stringify(defaultConfig, null, 2));
+              
+              if (newMappings.length > 0) {
+                console.log(kleur.green(`\nAdded ${newMappings.length} PagerDuty service mappings to config file:`));
+                console.log(newMappings.map(s => `  - ${s}`).join('\n'));
+                console.log(kleur.yellow('\nPlease edit the file to fill in the incidentioTeam values before migrating.'));
+              }
+            } else {
+              console.log(kleur.yellow('\nNo PagerDuty services detected in your monitors.'));
+            }
+          } catch (detectionError) {
+            spinner.fail('Failed to detect PagerDuty services');
+            console.error(kleur.red(`Error: ${detectionError instanceof Error ? detectionError.message : String(detectionError)}`));
+            console.log(kleur.yellow('Config file was created but automatic PagerDuty service detection failed.'));
+          }
         } catch (error) {
           spinner.fail('Failed to create configuration file');
           console.error(kleur.red(`Error: ${error instanceof Error ? error.message : String(error)}`));

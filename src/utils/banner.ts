@@ -1,5 +1,5 @@
 import figlet from 'figlet';
-import { kleur } from 'kleur';
+import kleur from 'kleur';
 import boxen from 'boxen';
 
 export function displayBanner(): void {

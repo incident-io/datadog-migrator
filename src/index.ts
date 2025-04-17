@@ -3,11 +3,12 @@
 import { Command } from 'commander';
 import dotenv from 'dotenv';
 
-import { displayBanner } from './utils/banner';
-import { registerAddIncidentioCommand } from './commands/add-incidentio';
-import { registerRemoveIncidentioCommand } from './commands/remove-incidentio';
-import { registerRemovePagerdutyCommand } from './commands/remove-pagerduty';
-import { registerInitConfigCommand } from './commands/init-config';
+import { displayBanner } from './utils/banner.js';
+import { registerAddIncidentioCommand } from './commands/add-incidentio.js';
+import { registerRemoveIncidentioCommand } from './commands/remove-incidentio.js';
+import { registerRemovePagerdutyCommand } from './commands/remove-pagerduty.js';
+import { registerInitConfigCommand } from './commands/init-config.js';
+import { registerAnalyzeCommand } from './commands/analyze.js';
 
 // Load environment variables from .env file
 dotenv.config();
@@ -25,10 +26,11 @@ program
   .version('1.0.0');
 
 // Register commands
+registerInitConfigCommand(program); // List init first as the starting point
+registerAnalyzeCommand(program); // Then analyze the environment
 registerAddIncidentioCommand(program);
 registerRemoveIncidentioCommand(program);
 registerRemovePagerdutyCommand(program);
-registerInitConfigCommand(program);
 
 // Parse command line arguments
 program.parse(process.argv);
