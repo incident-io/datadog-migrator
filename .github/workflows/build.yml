@@ -11,53 +11,29 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        node-version: [18.x]
-        os: [linux, macos, windows]
-        arch: [x64, arm64]
-        exclude:
-          # Exclude arm64 on Windows 
-          - os: windows
-            arch: arm64
-
     steps:
     - uses: actions/checkout@v4
 
-    - name: Use Node.js ${{ matrix.node-version }}
+    - name: Use Node.js 18.x
       uses: actions/setup-node@v4
       with:
-        node-version: ${{ matrix.node-version }}
+        node-version: 18.x
         cache: 'yarn'
 
     - name: Install dependencies
       run: yarn install --frozen-lockfile
 
-    - name: Build TypeScript
-      run: yarn build
-
     - name: Install pkg globally
       run: npm install -g pkg
 
-    - name: Build binary
-      run: |
-        PKG_OS=${{ matrix.os }}
-        PKG_ARCH=${{ matrix.arch }}
-        
-        if [ "$PKG_OS" = "macos" ]; then
-          PKG_OS="darwin"
-        fi
-        
-        pkg -t node18-${PKG_OS}-${PKG_ARCH} \
-            --output dist/datadog-migrator-${PKG_OS}-${PKG_ARCH} \
-            ./dist/index.js
-      shell: bash
+    - name: Build binaries
+      run: yarn build:binary
 
-    - name: Upload binary
+    - name: Upload binaries
       uses: actions/upload-artifact@v4
       with:
-        name: datadog-migrator-${{ matrix.os }}-${{ matrix.arch }}
-        path: dist/datadog-migrator-${{ matrix.os == 'macos' && 'darwin' || matrix.os }}-${{ matrix.arch }}
+        name: binaries
+        path: dist/datadog-migrator-*
 
   release:
     needs: build
@@ -78,22 +54,10 @@ jobs:
       with:
         path: binaries
     
-    - name: Prepare binaries for release
+    - name: Copy binaries to release directory
       run: |
         mkdir -p release
-        
-        # Copy each binary to release directory with version in filename
-        find binaries -type f -name "datadog-migrator-*" | while read -r file; do
-          filename=$(basename "$file")
-          cp "$file" "release/${filename%.exe}-${{ env.VERSION }}${filename##*.exe}"
-          
-          # Add .exe extension for Windows binaries
-          if [[ "$filename" == *windows* ]]; then
-            mv "release/${filename%.exe}-${{ env.VERSION }}" "release/${filename%.exe}-${{ env.VERSION }}.exe"
-          fi
-        done
-        
-        # Create SHA256 checksums
+        cp binaries/datadog-migrator-* release/
         cd release
         sha256sum * > SHA256SUMS.txt
       shell: bash
@@ -122,8 +86,8 @@ jobs:
           ## Assets
           
           Download the appropriate binary for your system:
-          - **macOS Intel**: `datadog-migrator-darwin-x64-${{ env.VERSION }}`
-          - **macOS Apple Silicon**: `datadog-migrator-darwin-arm64-${{ env.VERSION }}`
+          - **macOS Intel**: `datadog-migrator-macos-x64-${{ env.VERSION }}`
+          - **macOS Apple Silicon**: `datadog-migrator-macos-arm64-${{ env.VERSION }}`
           - **Linux**: `datadog-migrator-linux-x64-${{ env.VERSION }}`
           - **Windows**: `datadog-migrator-windows-x64-${{ env.VERSION }}.exe`
           

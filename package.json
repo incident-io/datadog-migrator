@@ -10,9 +10,9 @@
   "author": "Rory Bain <rorydbain@gmail.com>",
   "license": "MIT",
   "scripts": {
-    "build": "tsup src/index.ts --format esm --dts",
-    "build:binary": "pkg -t node18 --output dist/datadog-migrator ./dist/index.js",
-    "build:all": "yarn build && yarn build:binary",
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "build:binary": "node scripts/build-binaries.js",
+    "build:all": "yarn build:binary",
     "start": "tsx src/index.ts",
     "dev": "tsx watch src/index.ts",
     "lint": "eslint . --ext .ts",
