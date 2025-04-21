@@ -41,5 +41,4 @@ export interface MigrationOptions {
   singleWebhook?: boolean;
   verbose?: boolean;
   filter?: FilterOptions;
-  validateMappings?: boolean;
 }

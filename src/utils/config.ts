@@ -2,12 +2,10 @@ import fs from "fs";
 import path from "path";
 import { MigrationConfig } from "@/types";
 
-// Enable or disable debug logging
-export const DEBUG = false;
 
 // Global debug logging function
 export function debug(message: string, ...args: unknown[]) {
-  if (DEBUG) {
+  if (process.env.DEBUG) {
     console.log(`[DEBUG] ${message}`, ...args);
   }
 }

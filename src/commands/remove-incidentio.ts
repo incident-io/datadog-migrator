@@ -146,11 +146,9 @@ export const displayMigrationResults = (
       if (change.before !== change.after) {
         console.log(kleur.bold(`\nMonitor #${change.id}: ${change.name}`));
         console.log(kleur.yellow("Before:"));
-        console.log(
-          `  ${formatMessageDiff(change.before, change.after, type)}`,
-        );
+        console.log(`  ${type === 'add' ? change.before : formatMessageDiff(change.before, change.after, type)}`);
         console.log(kleur.green("After:"));
-        console.log(`  ${change.after}`);
+        console.log(`  ${type === 'add' ? formatMessageDiff(change.before, change.after, type) : change.after}`);
       } else if (options.verbose && change.reason) {
         console.log(kleur.bold(`\nMonitor #${change.id}: ${change.name}`));
         console.log(`  ${kleur.gray(`[Unchanged - ${change.reason}]`)}`);

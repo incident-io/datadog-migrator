@@ -1,6 +1,7 @@
 import { Command } from "commander";
 import kleur from "kleur";
 import ora from "ora";
+import inquirer from "inquirer";
 
 import { DatadogService } from "@/services/datadog";
 import { MigrationService } from "@/services/migration";
@@ -34,10 +35,6 @@ export function registerAddIncidentioCommand(program: Command): void {
     .option("-t, --tags <tags>", "Filter monitors by tags (comma-separated)")
     .option("-n, --name <pattern>", "Filter monitors by name pattern")
     .option("--message <pattern>", "Filter monitors by message pattern")
-    .option(
-      "--validate-mappings",
-      "Validate all PagerDuty services have mappings",
-    )
     .action(
       async (options: {
         apiKey: string;
@@ -49,7 +46,6 @@ export function registerAddIncidentioCommand(program: Command): void {
         tags?: string;
         name?: string;
         message?: string;
-        validateMappings?: boolean;
       }) => {
         try {
           // Load config if provided, otherwise prompt for credentials
@@ -62,6 +58,28 @@ export function registerAddIncidentioCommand(program: Command): void {
           });
 
           const spinner = ora("Connecting to Datadog API").start();
+
+          // Confirm action if not in dry run mode
+          if (!options.dryRun) {
+            spinner.stop();
+            const webhookType = options.singleWebhook || !incidentioConfig.webhookPerTeam 
+              ? "a single incident.io webhook (@webhook-incident-io)" 
+              : "team-specific incident.io webhooks (@webhook-incident-io-team)";
+            const { confirmed } = await inquirer.prompt([
+              {
+                type: "confirm",
+                name: "confirmed",
+                message: `This will add ${webhookType} to monitors with PagerDuty services. Continue?`,
+                default: false,
+              },
+            ]);
+
+            if (!confirmed) {
+              console.log(kleur.yellow("Operation cancelled."));
+              process.exit(0);
+            }
+            spinner.start("Connecting to Datadog API");
+          }
 
           // Create migration service with dryRun explicitly set
           const dryRunMode = options.dryRun === true;
@@ -90,7 +108,6 @@ export function registerAddIncidentioCommand(program: Command): void {
             singleWebhook: options.singleWebhook,
             verbose: options.verbose,
             filter: filterOptions,
-            validateMappings: options.validateMappings,
           });
 
           displayMigrationResults(spinner, 'add', result, options);

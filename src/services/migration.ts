@@ -6,8 +6,8 @@ import {
   MigrationOptions,
   IncidentioConfig,
   FilterOptions,
-} from "../types";
-import { debug } from "../utils/config";
+} from "@/types";
+import { debug } from "@/utils/config";
 
 export class MigrationService {
   private datadogService: DatadogService;
@@ -141,6 +141,7 @@ export class MigrationService {
     valid: boolean;
     unmappedServices: string[];
     nullMappings: string[];
+    invalidTeamNames?: string[];
   } {
     const servicesInMonitors = new Set<string>();
     const pdPattern = this.getPagerDutyPattern();
@@ -167,19 +168,40 @@ export class MigrationService {
 
     const unmappedServices: string[] = [];
     const nullMappings: string[] = [];
+    const invalidTeamNames: Record<string, string> = {};
+    
+    // Define some known team name formats
+    // In a real implementation, this might be fetched from incident.io API
+    const validTeamNamePattern = /^[a-z0-9-]+$/; // Lowercase alphanumeric with hyphens
 
     for (const service of servicesInMonitors) {
       if (!mappedServices.has(service)) {
         unmappedServices.push(service);
       } else if (mappedServices.get(service) === null) {
         nullMappings.push(service);
+      } else if (this.incidentioConfig.webhookPerTeam) {
+        // Validate team name format if using team-specific webhooks
+        const teamName = mappedServices.get(service);
+        if (teamName && !validTeamNamePattern.test(teamName)) {
+          invalidTeamNames[service] = teamName;
+        }
       }
     }
 
+    // If using team-specific webhooks, all issues make validation invalid
+    // If using single webhook, only unmappedServices make validation invalid
+    const requireTeamMappings = this.incidentioConfig.webhookPerTeam;
+    const valid = unmappedServices.length === 0 && 
+                 (!requireTeamMappings || 
+                  (nullMappings.length === 0 && Object.keys(invalidTeamNames).length === 0));
+
     return {
-      valid: unmappedServices.length === 0 && nullMappings.length === 0,
+      valid,
       unmappedServices,
       nullMappings,
+      invalidTeamNames: Object.entries(invalidTeamNames).map(([service, team]) => 
+        `${service} → "${team}"`
+      ),
     };
   }
 
@@ -199,6 +221,7 @@ export class MigrationService {
       valid: boolean;
       unmappedServices: string[];
       nullMappings: string[];
+      invalidTeamNames?: string[];
     };
   }> {
     // Get all monitors
@@ -209,26 +232,35 @@ export class MigrationService {
       ? this.filterMonitors(allMonitors, options.filter)
       : allMonitors;
 
-    // Validate mappings if requested
+    // Always validate mappings for add-incidentio
     let validationResults;
-    if (
-      options.validateMappings &&
-      options.type === MigrationType.ADD_INCIDENTIO_WEBHOOK
-    ) {
+    if (options.type === MigrationType.ADD_INCIDENTIO_WEBHOOK) {
       validationResults = this.validatePagerDutyMappings(monitors);
 
       // If validation fails, and we're not in dry run mode, abort
       if (!validationResults.valid && !options.dryRun) {
         if (validationResults.unmappedServices.length > 0) {
           throw new Error(
-            `Missing mappings for PagerDuty services: ${validationResults.unmappedServices.join(", ")}`,
+            `Missing mappings for PagerDuty services: ${validationResults.unmappedServices.join(", ")}\n\n` +
+            `Please add these services to your config file before migrating.`
           );
         }
 
-        if (validationResults.nullMappings.length > 0) {
+        if (validationResults.nullMappings.length > 0 && this.incidentioConfig.webhookPerTeam) {
           throw new Error(
-            `Missing team assignments for these PagerDuty services: ${validationResults.nullMappings.join(", ")}\n\n` +
-              `Please edit your config file to assign incident.io teams to these PagerDuty services before migrating.`,
+            `When using team-specific webhooks, all PagerDuty services must have team assignments.\n` +
+            `Missing team assignments for: ${validationResults.nullMappings.join(", ")}\n\n` +
+            `Please edit your config file to assign incident.io teams to these PagerDuty services before migrating.\n`
+          );
+        }
+        
+        if (validationResults.invalidTeamNames && 
+            validationResults.invalidTeamNames.length > 0 && 
+            this.incidentioConfig.webhookPerTeam) {
+          throw new Error(
+            `When using team-specific webhooks, team names must be in a valid format (lowercase alphanumeric with hyphens).\n` +
+            `Invalid team names for services:\n${validationResults.invalidTeamNames.join("\n")}\n\n` +
+            `Please edit your config file to use valid team names for these PagerDuty services.\n`
           );
         }
       }
@@ -439,6 +471,9 @@ export class MigrationService {
 
           // If there's an existing webhook but it doesn't match the expected one, replace it
           if (existingWebhooks.length > 0) {
+            // Store original message for "before" field
+            const originalMessage = message;
+            
             if (
               !existingWebhooks.some((webhook) => webhook === `@${webhookName}`)
             ) {
