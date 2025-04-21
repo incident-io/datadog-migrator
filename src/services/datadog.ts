@@ -114,20 +114,20 @@ export class DatadogService {
   async createWebhook(webhook: DatadogWebhook): Promise<void> {
     try {
       debug(`Creating webhook: ${webhook.name}`);
-      
+
       // Format custom headers as JSON if it's not already
       let headers = webhook.customHeaders;
-      if (headers && !headers.startsWith('{')) {
-        headers = JSON.stringify({ 'Authorization': `Bearer ${headers}` });
+      if (headers && !headers.startsWith("{")) {
+        headers = JSON.stringify({ Authorization: `Bearer ${headers}` });
       }
-      
+
       await this.webhooksApi.createWebhooksIntegration({
         body: {
           name: webhook.name,
           url: webhook.url,
           payload: webhook.payload,
           customHeaders: headers,
-          encodeAs: "json"
+          encodeAs: "json",
         },
       });
       debug(`Successfully created webhook: ${webhook.name}`);
@@ -135,7 +135,9 @@ export class DatadogService {
       debug(`Error creating webhook ${webhook.name}: ${String(error)}`);
       console.error(`Error creating webhook ${webhook.name}:`, error);
       if (error instanceof Error) {
-        throw new Error(`Failed to create webhook ${webhook.name}: ${error.message}`);
+        throw new Error(
+          `Failed to create webhook ${webhook.name}: ${error.message}`,
+        );
       }
       throw error;
     }

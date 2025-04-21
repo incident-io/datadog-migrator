@@ -367,12 +367,14 @@ ${JSON.stringify(exampleMappings, null, 2)}
  */
 function displayMonitorDetails(monitors: DatadogMonitor[]): void {
   console.log(kleur.bold("\nMonitor Details:"));
-  
+
   // Display each monitor's tags first
   console.log(kleur.bold("\nMonitor Tags:"));
   monitors.forEach((monitor) => {
     console.log(`  ${kleur.bold(`#${monitor.id}`)}: ${monitor.name}`);
-    console.log(`    Tags: ${monitor.tags.length > 0 ? monitor.tags.join(', ') : 'No tags'}`);
+    console.log(
+      `    Tags: ${monitor.tags.length > 0 ? monitor.tags.join(", ") : "No tags"}`,
+    );
   });
 
   // Group monitors by their notification configuration

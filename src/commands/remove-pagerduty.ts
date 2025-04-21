@@ -6,7 +6,6 @@ import ora from "ora";
 import { DatadogService } from "@/services/datadog";
 import { MigrationService } from "@/services/migration";
 import { loadConfig } from "@/utils/config";
-import { formatMessageDiff } from "@/utils/diff";
 import { MigrationType } from "@/types";
 import { prepareFilterOptions } from "@/types/prepareFilterOptions";
 import { displayMigrationResults } from "@/commands/remove-incidentio";
@@ -86,7 +85,6 @@ export function registerRemovePagerdutyCommand(program: Command): void {
           );
           const spinner = ora("Connecting to Datadog API").start();
 
-
           // Perform migration
           spinner.start(
             options.dryRun
@@ -104,7 +102,7 @@ export function registerRemovePagerdutyCommand(program: Command): void {
             filter: filterOptions,
           });
 
-          displayMigrationResults(spinner, 'remove', result, options)
+          displayMigrationResults(spinner, "remove", result, options);
         } catch (error) {
           console.error(
             kleur.red(
@@ -116,4 +114,3 @@ export function registerRemovePagerdutyCommand(program: Command): void {
       },
     );
 }
-
