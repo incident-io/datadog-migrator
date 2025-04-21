@@ -100,9 +100,12 @@ jobs:
     
     - name: Generate changelog
       id: changelog
-      uses: metcalfc/changelog-generator@v4.0.1
-      with:
-        myToken: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        # Get tag message
+        TAG_MESSAGE=$(git tag -l --format='%(contents)' ${GITHUB_REF#refs/tags/})
+        echo "TAG_MESSAGE<<EOF" >> $GITHUB_ENV
+        echo "$TAG_MESSAGE" >> $GITHUB_ENV
+        echo "EOF" >> $GITHUB_ENV
 
     - name: Create Release
       id: create_release
@@ -113,8 +116,8 @@ jobs:
         body: |
           # Datadog Migrator v${{ env.VERSION }}
           
-          ## What's Changed
-          ${{ steps.changelog.outputs.changelog }}
+          ## Release Notes
+          ${{ env.TAG_MESSAGE || 'Initial release' }}
           
           ## Assets
           
