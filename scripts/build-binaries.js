@@ -1,9 +1,15 @@
 #!/usr/bin/env node
 
 // This script builds standalone binaries for different platforms
-const { execSync } = require('child_process');
-const fs = require('fs');
-const path = require('path');
+import { execSync } from 'child_process';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const PLATFORMS = [
   { name: 'linux', arch: 'x64', target: 'node18-linux-x64' },
@@ -12,7 +18,8 @@ const PLATFORMS = [
   { name: 'windows', arch: 'x64', target: 'node18-win-x64' }
 ];
 
-const VERSION = require('../package.json').version;
+const packageJson = require('../package.json');
+const VERSION = packageJson.version;
 const DIST_DIR = path.join(__dirname, '../dist');
 
 async function main() {
@@ -62,8 +69,23 @@ async function main() {
     
     binaries.forEach(binary => {
       const fileName = path.basename(binary.path);
-      // Generate checksum
-      const checksum = execSync(`shasum -a 256 "${binary.path}"`, { encoding: 'utf8' });
+      // Generate checksum - handle cross-platform differences
+      let checksum;
+      try {
+        // Try macOS/Linux style
+        checksum = execSync(`shasum -a 256 "${binary.path}"`, { encoding: 'utf8' });
+      } catch (error) {
+        try {
+          // Try Windows style
+          checksum = execSync(`certutil -hashfile "${binary.path}" SHA256 | findstr /v "hash"`, { encoding: 'utf8' });
+          // Format Windows output to match Linux style
+          const hash = checksum.trim().split('\r\n')[0].trim().replace(/\s+/g, '');
+          checksum = `${hash}  ${fileName}\n`;
+        } catch (windowsError) {
+          console.error(`Could not generate checksum for ${fileName}`);
+          return;
+        }
+      }
       checksums += checksum;
     });
     
@@ -79,32 +101,34 @@ async function main() {
 function createPkgEntryFile() {
   const entryPath = path.join(DIST_DIR, 'cli-entry.js');
   
+  // We need to use CommonJS in the entry file for pkg to work properly
   const content = `
-  #!/usr/bin/env node
-  
-  // This file is used by pkg to create binaries
-  // It ensures all dependencies are correctly bundled
-  
-  // In binary builds, __dirname is not the actual directory
-  // So we need to handle paths differently
-  if (process.pkg) {
-    // Running from packaged binary
-    try {
-      require('./index.js');
-    } catch (error) {
-      console.error('Error starting application:', error);
-      process.exit(1);
-    }
-  } else {
-    // Running directly with Node
+#!/usr/bin/env node
+
+// This file is used by pkg to create binaries
+// It ensures all dependencies are correctly bundled
+
+// In binary builds, __dirname is not the actual directory
+// So we need to handle paths differently
+if (process.pkg) {
+  // Running from packaged binary
+  try {
     require('./index.js');
+  } catch (error) {
+    console.error('Error starting application:', error);
+    process.exit(1);
   }
-  `;
+} else {
+  // Running directly with Node
+  require('./index.js');
+}
+`;
   
   fs.writeFileSync(entryPath, content);
   console.log('📄 Created pkg entry file');
 }
 
+// Run the main function
 main().catch(err => {
   console.error('Error building binaries:', err);
   process.exit(1);

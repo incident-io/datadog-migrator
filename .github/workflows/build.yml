@@ -57,7 +57,7 @@ jobs:
     - name: Copy binaries to release directory
       run: |
         mkdir -p release
-        cp binaries/datadog-migrator-* release/
+        cp binaries/binaries/datadog-migrator-* release/
         cd release
         sha256sum * > SHA256SUMS.txt
       shell: bash
