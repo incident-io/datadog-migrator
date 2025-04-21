@@ -8,8 +8,11 @@ A CLI tool to help migrate Datadog monitors between notification systems, specif
 - Remove incident.io webhooks from monitors
 - Remove PagerDuty service mentions from monitors
 - Support for team-specific webhook mapping
+- Add team tags to monitors based on PagerDuty service mappings
+- Automatic webhook creation in Datadog
 - Configuration via command line, interactive prompts, or config file
 - Dry run mode to preview changes without modifying monitors
+- Tag-based filtering of monitors
 
 ## Installation
 
@@ -36,13 +39,16 @@ npx datadog-migrator [command]
 datadog-migrator init
 
 # Add incident.io webhooks to monitors using PagerDuty
-datadog-migrator add-incidentio --api-key YOUR_API_KEY --app-key YOUR_APP_KEY
+datadog-migrator add-incidentio --api-key YOUR_API_KEY --app-key YOUR_APP_KEY --config config.json
 
 # Remove incident.io webhooks from monitors
-datadog-migrator remove-incidentio --api-key YOUR_API_KEY --app-key YOUR_APP_KEY
+datadog-migrator remove-incidentio --api-key YOUR_API_KEY --app-key YOUR_APP_KEY --config config.json
 
 # Remove PagerDuty mentions from monitors
-datadog-migrator remove-pagerduty --api-key YOUR_API_KEY --app-key YOUR_APP_KEY
+datadog-migrator remove-pagerduty --api-key YOUR_API_KEY --app-key YOUR_APP_KEY --config config.json
+
+# Analyze monitors without making changes
+datadog-migrator analyze --api-key YOUR_API_KEY --app-key YOUR_APP_KEY --config config.json
 ```
 
 ## Commands
@@ -56,7 +62,16 @@ datadog-migrator init
 ```
 
 Options:
+- `-k, --api-key <key>` - Datadog API key
+- `-a, --app-key <key>` - Datadog App key
 - `--path <path>` - Path to save the config file (default: ./config.json)
+
+The init command will:
+1. Ask how you want to tag incident.io webhooks (single webhook or team-specific)
+2. If using a single webhook, ask if you want to add team tags to monitors
+3. Collect incident.io alert source URL and webhook token
+4. Scan for PagerDuty services in your monitors
+5. Create a config file with mappings template
 
 ### add-incidentio
 
@@ -70,9 +85,12 @@ Options:
 - `-k, --api-key <key>` - Datadog API key
 - `-a, --app-key <key>` - Datadog App key
 - `-c, --config <path>` - Path to config file
-- `-m, --mapping <path>` - Path to mapping file
 - `-d, --dry-run` - Dry run mode (no actual changes)
 - `-s, --single-webhook` - Use a single webhook for all monitors
+- `-v, --verbose` - Show detailed output
+- `-t, --tags <tags>` - Filter monitors by tags (comma-separated)
+- `-n, --name <pattern>` - Filter monitors by name pattern
+- `--message <pattern>` - Filter monitors by message pattern
 
 ### remove-incidentio
 
@@ -87,6 +105,10 @@ Options:
 - `-a, --app-key <key>` - Datadog App key
 - `-c, --config <path>` - Path to config file
 - `-d, --dry-run` - Dry run mode (no actual changes)
+- `-v, --verbose` - Show detailed output
+- `-t, --tags <tags>` - Filter monitors by tags (comma-separated)
+- `-n, --name <pattern>` - Filter monitors by name pattern
+- `--message <pattern>` - Filter monitors by message pattern
 
 ### remove-pagerduty
 
@@ -101,38 +123,70 @@ Options:
 - `-a, --app-key <key>` - Datadog App key
 - `-c, --config <path>` - Path to config file
 - `-d, --dry-run` - Dry run mode (no actual changes)
+- `-v, --verbose` - Show detailed output
+- `-t, --tags <tags>` - Filter monitors by tags (comma-separated)
+- `-n, --name <pattern>` - Filter monitors by name pattern
+- `--message <pattern>` - Filter monitors by message pattern
+
+### analyze
+
+Analyze monitors to find PagerDuty services and incident.io webhooks without making changes:
+
+```bash
+datadog-migrator analyze
+```
+
+Options:
+- `-k, --api-key <key>` - Datadog API key
+- `-a, --app-key <key>` - Datadog App key
+- `-c, --config <path>` - Path to config file
+- `-v, --verbose` - Show detailed output
+- `-t, --tags <tags>` - Filter monitors by tags (comma-separated)
+- `-n, --name <pattern>` - Filter monitors by name pattern
+- `--message <pattern>` - Filter monitors by message pattern
 
 ## Configuration
 
-You can configure the tool using a JSON configuration file:
+You can configure the tool using a JSON configuration file. The tool will create this for you when you run the `init` command.
 
 ```json
 {
   "incidentioConfig": {
-    "webhookNameFormat": "webhook-incident-io-{team}",
-    "defaultWebhook": "webhook-incident-io"
+    "webhookPerTeam": false,
+    "webhookUrl": "https://api.incident.io/v2/alerts/incoming/123456789",
+    "webhookToken": "your_webhook_token",
+    "addTeamTags": true,
+    "teamTagPrefix": "team"
   },
   "mappings": [
     {
-      "pagerdutyService": "Database",
+      "pagerdutyService": "database-service",
       "incidentioTeam": "platform"
     },
     {
-      "pagerdutyService": "API",
+      "pagerdutyService": "api-service",
       "incidentioTeam": "api"
     }
   ]
 }
 ```
 
+### Configuration Options
+
+- `webhookPerTeam`: Whether to use team-specific webhooks (true) or a single webhook (false)
+- `webhookUrl`: The URL for your incident.io alert source
+- `webhookToken`: The secret token for your incident.io alert source
+- `addTeamTags`: (Optional) Whether to add team tags to monitors when using single webhook mode
+- `teamTagPrefix`: (Optional) The prefix to use for team tags (default: "team")
+- `mappings`: An array of mappings from PagerDuty service names to incident.io team names
+
 ## Environment Variables
 
-You can also use environment variables for configuration. Create a `.env` file based on the provided `.env.example`:
+You can also use environment variables for configuration:
 
 ```
 DATADOG_API_KEY=your_api_key_here
 DATADOG_APP_KEY=your_app_key_here
-DATADOG_BASE_URL=https://api.datadoghq.com/api/v1
 ```
 
 ## License
