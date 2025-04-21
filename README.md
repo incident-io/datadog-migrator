@@ -16,20 +16,26 @@ A CLI tool to help migrate Datadog monitors between notification systems, specif
 
 ## Installation
 
-### Using npm/yarn globally
+### Download the binary
+
+You can download the latest binary release from the [GitHub Releases](https://github.com/incident-io/datadog-migrator/releases) page.
+
+Choose the appropriate binary for your system:
+- **macOS Intel**: `datadog-migrator-darwin-x64`
+- **macOS Apple Silicon**: `datadog-migrator-darwin-arm64`
+- **Linux**: `datadog-migrator-linux-x64`
+- **Windows**: `datadog-migrator-windows-x64.exe`
+
+Make the binary executable (Linux/macOS):
 
 ```bash
-# Using npm
-npm install -g datadog-migrator
-
-# Using yarn
-yarn global add datadog-migrator
+chmod +x ./datadog-migrator-*
 ```
 
-### Running directly with npx
+You can then move the binary to a directory in your PATH, for example:
 
 ```bash
-npx datadog-migrator [command]
+sudo mv ./datadog-migrator-darwin-arm64 /usr/local/bin/datadog-migrator
 ```
 
 ## Usage
@@ -188,6 +194,17 @@ You can also use environment variables for configuration:
 DATADOG_API_KEY=your_api_key_here
 DATADOG_APP_KEY=your_app_key_here
 ```
+
+## Building from source
+
+If you want to build the binaries yourself:
+
+1. Clone the repository
+2. Install dependencies with `yarn install`
+3. Build the project with `yarn build`
+4. Generate binaries with `yarn build:binary`
+
+The binaries will be available in the `dist` directory.
 
 ## License
 
