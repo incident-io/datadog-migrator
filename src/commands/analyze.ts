@@ -44,7 +44,6 @@ export function registerAnalyzeCommand(program: Command): void {
             appKey: options.appKey,
           });
 
-          // Verify connection
           const spinner = ora("Connecting to Datadog API").start();
           let monitors: DatadogMonitor[];
 

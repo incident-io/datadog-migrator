@@ -1,6 +1,6 @@
 import figlet from "figlet";
 import kleur from "kleur";
-import boxen from "boxen";
+import boxen, { Options } from "boxen";
 
 export function displayBanner(): void {
   const banner = figlet.textSync("Datadog Migrator", {
@@ -9,7 +9,7 @@ export function displayBanner(): void {
     verticalLayout: "default",
   });
 
-  const boxOptions = {
+  const boxOptions: Options = {
     padding: 1,
     margin: 1,
     borderStyle: "round",
@@ -17,7 +17,7 @@ export function displayBanner(): void {
   };
 
   const message = boxen(
-    `${kleur.cyan(banner)}\n${kleur.yellow("Incident.io <> Datadog migration tool")}`,
+    `${kleur.cyan(banner)}\n${kleur.yellow("incident.io <> PagerDuty Datadog migration tool")}`,
     boxOptions,
   );
 

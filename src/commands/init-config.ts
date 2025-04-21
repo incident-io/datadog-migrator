@@ -59,10 +59,15 @@ export function registerInitConfigCommand(program: Command): void {
             name: "webhookStrategy",
             message: "How do you want to tag incident.io webhooks?",
             choices: [
-              { name: "Single webhook for all monitors", value: "single" },
+              { 
+                name: "Single webhook for all monitors", 
+                value: "single",
+                description: "Create one webhook in Datadog that you tag in monitors with @webhook-incident-io. You would rely on monitor tags to identify teams, sending 'tags': $TAGS in the payload which incident.io can parse to determine ownership."
+              },
               {
                 name: "Team-specific webhooks based on mappings",
                 value: "team",
+                description: "Create multiple webhooks in Datadog (one per team) that you tag with @webhook-incident-io-myteam. Each webhook configuration will include both 'tags': $TAGS and a hardcoded 'team': 'my-team' in the payload."
               },
             ],
           },
