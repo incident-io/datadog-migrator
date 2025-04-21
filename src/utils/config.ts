@@ -35,20 +35,13 @@ export function loadConfig(
     const configContent = fs.readFileSync(configPath, "utf8");
     const config = JSON.parse(configContent) as MigrationConfig;
 
-    if (
-      !config.incidentioConfig ||
-      !config.incidentioConfig.webhookNameFormat
-    ) {
-      if (!config.incidentioConfig) {
-        config.incidentioConfig = {
-          webhookNameFormat: "webhook-incident-io-{team}",
-          defaultWebhook: "webhook-incident-io",
-        };
-      } else if (!config.incidentioConfig.webhookNameFormat) {
-        config.incidentioConfig.webhookNameFormat =
-          "webhook-incident-io-{team}";
-      }
-
+    if (!config.incidentioConfig) {
+      config.incidentioConfig = {
+        webhookPerTeam: false,
+        webhookUrl: undefined,
+        webhookToken: undefined,
+      };
+      
       // Save the updated config back to the file
       if (create) {
         fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
@@ -74,8 +67,9 @@ export function loadConfig(
 export function createDefaultConfig(): MigrationConfig {
   return {
     incidentioConfig: {
-      webhookNameFormat: "webhook-incident-io-{team}",
-      defaultWebhook: "webhook-incident-io",
+      webhookPerTeam: false,
+      webhookUrl: undefined,
+      webhookToken: undefined,
     },
     mappings: [],
   };

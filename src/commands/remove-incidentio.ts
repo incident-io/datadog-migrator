@@ -97,7 +97,7 @@ export function registerRemoveIncidentioCommand(program: Command): void {
             filter: filterOptions,
           });
 
-          displayMigrationResults(spinner, result, options);
+          displayMigrationResults(spinner, 'remove', result, options);
         } catch (error) {
           console.error(
             kleur.red(
@@ -112,6 +112,7 @@ export function registerRemoveIncidentioCommand(program: Command): void {
 
 export const displayMigrationResults = (
   spinner: Ora,
+  type: 'add' | 'remove',
   result: {
     processed: number;
     updated: number;
@@ -130,7 +131,7 @@ export const displayMigrationResults = (
     verbose?: boolean;
   },
 ): void => {
-  spinner.succeed(options.dryRun ? "Simulation complete" : "Removal complete");
+  spinner.succeed(options.dryRun ? "Simulation complete" : "Update complete");
 
   // Show results
   console.log(kleur.bold("\nResults:"));
@@ -146,7 +147,7 @@ export const displayMigrationResults = (
         console.log(kleur.bold(`\nMonitor #${change.id}: ${change.name}`));
         console.log(kleur.yellow("Before:"));
         console.log(
-          `  ${formatMessageDiff(change.before, change.after, "remove")}`,
+          `  ${formatMessageDiff(change.before, change.after, type)}`,
         );
         console.log(kleur.green("After:"));
         console.log(`  ${change.after}`);

@@ -1,6 +1,7 @@
 export interface IncidentioConfig {
-  webhookNameFormat: string;
-  defaultWebhook?: string;
+  webhookPerTeam: boolean;
+  webhookUrl?: string;
+  webhookToken?: string;
 }
 
 export interface MigrationMapping {

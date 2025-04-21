@@ -73,82 +73,65 @@ export function registerInitConfigCommand(program: Command): void {
           },
         ]);
 
-        if (webhookStrategy === "single") {
-          const { webhookName } = await inquirer.prompt([
-            {
-              type: "input",
-              name: "webhookName",
-              message: "Enter the name for the single webhook:",
-              default: "webhook-incident-io",
-            },
-          ]);
-
-          defaultConfig.incidentioConfig.defaultWebhook = webhookName;
-        } else {
-          const { format } = await inquirer.prompt([
-            {
-              type: "input",
-              name: "format",
-              message:
-                "Enter the webhook name format (use {team} placeholder):",
-              default: "webhook-incident-io-{team}",
-              validate: (input) =>
-                input.includes("{team}")
-                  ? true
-                  : "Format must include {team} placeholder",
-            },
-          ]);
-
-          defaultConfig.incidentioConfig.webhookNameFormat = format;
-
-          // Ask if they want to create some mappings now
-          const { createMappings } = await inquirer.prompt([
-            {
-              type: "confirm",
-              name: "createMappings",
-              message:
-                "Do you want to create PagerDuty service to incident.io team mappings now?",
-              default: true,
-            },
-          ]);
-
-          if (createMappings) {
-            let addMore = true;
-            while (addMore) {
-              const mapping = await inquirer.prompt([
-                {
-                  type: "input",
-                  name: "pagerdutyService",
-                  message: "Enter PagerDuty service name:",
-                  validate: (input) =>
-                    input ? true : "Service name is required",
-                },
-                {
-                  type: "input",
-                  name: "incidentioTeam",
-                  message: "Enter corresponding incident.io team name:",
-                  validate: (input) => (input ? true : "Team name is required"),
-                },
-              ]);
-
-              defaultConfig.mappings.push({
-                pagerdutyService: mapping.pagerdutyService,
-                incidentioTeam: mapping.incidentioTeam,
-              });
-
-              const { addAnother } = await inquirer.prompt([
-                {
-                  type: "confirm",
-                  name: "addAnother",
-                  message: "Add another mapping?",
-                  default: false,
-                },
-              ]);
-
-              addMore = addAnother;
+        // Set webhook strategy
+        defaultConfig.incidentioConfig.webhookPerTeam = webhookStrategy === "team";
+        
+        // Get incident.io alert source details
+        const { webhookUrl, webhookToken } = await inquirer.prompt([
+          {
+            type: "input",
+            name: "webhookUrl",
+            message: "Enter the incident.io alert source URL:",
+            validate: (input) => 
+              input && input.startsWith("http") 
+                ? true 
+                : "Please enter a valid URL (should start with http or https)",
+          },
+          {
+            type: "input",
+            name: "webhookToken",
+            message: "Enter the incident.io alert source secret token:",
+            validate: (input) => 
+              input 
+                ? true 
+                : "Please enter the secret token from your incident.io alert source",
+          },
+        ]);
+        
+        defaultConfig.incidentioConfig.webhookUrl = webhookUrl;
+        
+        // Clean up token input - handle various formats users might paste
+        let cleanToken = webhookToken.trim();
+        
+        // Handle if they pasted a full header JSON object
+        if (cleanToken.startsWith("{") && cleanToken.includes("Authorization")) {
+          try {
+            const headerObj = JSON.parse(cleanToken);
+            if (headerObj.Authorization && typeof headerObj.Authorization === "string") {
+              cleanToken = headerObj.Authorization;
             }
+          } catch (e) {
+            // Not valid JSON, continue with other processing
           }
         }
+        
+        // Handle "Bearer token" format
+        if (cleanToken.startsWith("Bearer ")) {
+          cleanToken = cleanToken.substring(7).trim();
+        }
+        
+        defaultConfig.incidentioConfig.webhookToken = cleanToken;
+
+        console.log(
+          kleur.blue(
+            "\nWe'll scan for PagerDuty services and add them to your config file."
+          )
+        );
+        console.log(
+          kleur.blue(
+            "You can edit the config file later to map these to incident.io teams."
+          )
+        );
 
         // Write the config file
         const spinner = ora("Creating configuration file").start();

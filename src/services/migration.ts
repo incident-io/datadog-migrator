@@ -15,6 +15,9 @@ export class MigrationService {
   private mappings: MigrationMapping[];
   private dryRun: boolean;
 
+  // Keep track of webhooks we've already created in this session
+  private createdWebhooks: Set<string> = new Set();
+
   constructor(
     datadogService: DatadogService,
     incidentioConfig: IncidentioConfig,
@@ -62,21 +65,26 @@ export class MigrationService {
     return allMatches;
   }
 
-  private getWebhookNameForTeam(team?: string): string {
-    if (!team && this.incidentioConfig.defaultWebhook) {
-      debug(`Using default webhook: ${this.incidentioConfig.defaultWebhook}`);
-      return this.incidentioConfig.defaultWebhook;
+  /**
+   * Get the webhook name to use in Datadog configuration (without webhook- prefix)
+   */
+  private getDatadogWebhookName(team?: string): string {
+    if (!this.incidentioConfig.webhookPerTeam || !team) {
+      return "incident-io";
     }
-
-    if (!team) {
-      debug(`No team specified, using fallback webhook: webhook-incident-io`);
+    return `incident-io-${team}`;
+  }
+  
+  /**
+   * Get the webhook name to use in monitor messages (with @webhook- prefix)
+   */
+  private getWebhookNameForTeam(team?: string): string {
+    if (!this.incidentioConfig.webhookPerTeam || !team) {
+      debug(`Using default webhook: webhook-incident-io`);
       return "webhook-incident-io";
     }
 
-    const webhookName = this.incidentioConfig.webhookNameFormat.replace(
-      "{team}",
-      team,
-    );
+    const webhookName = `webhook-incident-io-${team}`;
     debug(`Generated webhook name for team "${team}": ${webhookName}`);
     return webhookName;
   }
@@ -219,8 +227,8 @@ export class MigrationService {
 
         if (validationResults.nullMappings.length > 0) {
           throw new Error(
-            `Incomplete mappings (null incidentioTeam values) for PagerDuty services: ${validationResults.nullMappings.join(", ")}\n` +
-              `Please edit your mapping file to provide team names for these services.`,
+            `Missing team assignments for these PagerDuty services: ${validationResults.nullMappings.join(", ")}\n\n` +
+              `Please edit your config file to assign incident.io teams to these PagerDuty services before migrating.`,
           );
         }
       }
@@ -281,6 +289,99 @@ export class MigrationService {
     };
   }
 
+  /**
+   * Create a webhook in Datadog if it doesn't already exist
+   * @param webhookName The name of the webhook to create (without @ prefix)
+   * @param team Optional team name to include in payload
+   * @returns true if successful, false if failed or skipped
+   */
+  private async ensureWebhookExists(webhookName: string, team?: string): Promise<boolean> {
+    if (this.dryRun) {
+      debug(`Dry run: Skipping webhook creation for ${webhookName}`);
+      return true;
+    }
+    
+    // Get the actual Datadog webhook name (without the webhook- prefix)
+    const datadogWebhookName = this.getDatadogWebhookName(team);
+    
+    // Skip if we've already created this webhook in this session
+    if (this.createdWebhooks.has(datadogWebhookName)) {
+      debug(`Webhook ${datadogWebhookName} was already created in this session`);
+      return true;
+    }
+    
+    // Check if webhook already exists
+    try {
+      const webhook = await this.datadogService.getWebhook(datadogWebhookName);
+      if (webhook) {
+        debug(`Webhook ${datadogWebhookName} already exists`);
+        this.createdWebhooks.add(datadogWebhookName);
+        return true;
+      }
+      
+      // Webhook doesn't exist - check if we have URL and token
+      if (!this.incidentioConfig.webhookUrl || !this.incidentioConfig.webhookToken) {
+        debug(`Missing webhook URL or token, cannot create webhook ${datadogWebhookName}`);
+        return false;
+      }
+      
+      // Standard Datadog webhook payload
+      let payload = `{
+  "alert_transition": "$ALERT_TRANSITION",
+  "deduplication_key": "$AGGREG_KEY-$ALERT_CYCLE_KEY",
+  "title": "$EVENT_TITLE",
+  "description": "$EVENT_MSG",
+  "source_url": "$LINK",
+  "metadata": {
+      "id": "$ID",
+      "alert_metric": "$ALERT_METRIC",
+      "alert_query": "$ALERT_QUERY",
+      "alert_scope": "$ALERT_SCOPE",
+      "alert_status": "$ALERT_STATUS",
+      "alert_title": "$ALERT_TITLE",
+      "alert_type": "$ALERT_TYPE",
+      "alert_url": "$LINK",
+      "alert_priority": "$ALERT_PRIORITY",
+      "date": "$DATE",
+      "event_type": "$EVENT_TYPE",
+      "hostname": "$HOSTNAME",
+      "last_updated": "$LAST_UPDATED",
+      "logs_sample": $LOGS_SAMPLE,
+      "org": {
+          "id": "$ORG_ID",
+          "name": "$ORG_NAME"
+      },
+      "snapshot_url": "$SNAPSHOT",
+      "tags": "$TAGS"`;
+      
+      // Add team field if provided
+      if (team) {
+        payload += `,
+      "team": "${team}"`;
+      }
+      
+      // Close the JSON
+      payload += `
+  }
+}`;
+      
+      // Create the webhook
+      await this.datadogService.createWebhook({
+        name: datadogWebhookName,
+        url: this.incidentioConfig.webhookUrl,
+        payload,
+        customHeaders: this.incidentioConfig.webhookToken,
+      });
+      
+      debug(`Created webhook ${datadogWebhookName}`);
+      this.createdWebhooks.add(datadogWebhookName);
+      return true;
+    } catch (error) {
+      debug(`Error creating webhook ${webhookName}: ${String(error)}`);
+      return false;
+    }
+  }
+
   async processMonitor(
     monitor: DatadogMonitor,
     options: MigrationOptions,
@@ -323,6 +424,18 @@ export class MigrationService {
         if (options.singleWebhook) {
           // Use default webhook for all
           const webhookName = this.getWebhookNameForTeam();
+          
+          // Create the webhook if needed
+          if (!dryRun) {
+            const webhookCreated = await this.ensureWebhookExists(webhookName);
+            if (!webhookCreated) {
+              return {
+                updated: false,
+                message: newMessage,
+                reason: "Failed to create required webhook",
+              };
+            }
+          }
 
           // If there's an existing webhook but it doesn't match the expected one, replace it
           if (existingWebhooks.length > 0) {
@@ -345,14 +458,14 @@ export class MigrationService {
                 reason: "Already has correct incident.io webhook",
               };
             }
+          } else {
+            // No existing webhook, add the new one
+            debug(
+              `Adding default webhook @${webhookName} to monitor ${monitor.id}`,
+            );
+            newMessage = `${message} @${webhookName}`;
+            updated = true;
           }
-
-          // No existing webhook, add the new one
-          debug(
-            `Adding default webhook @${webhookName} to monitor ${monitor.id}`,
-          );
-          newMessage = `${message} @${webhookName}`;
-          updated = true;
         } else {
           // Team-specific webhooks
           debug(`Using team-specific webhooks for monitor ${monitor.id}`);
@@ -362,6 +475,19 @@ export class MigrationService {
           for (const service of pagerDutyServices) {
             const team = this.getTeamForPagerDutyService(service);
             const webhookName = this.getWebhookNameForTeam(team);
+            
+            // Create team-specific webhook if needed
+            if (!dryRun) {
+              const webhookCreated = await this.ensureWebhookExists(webhookName, team);
+              if (!webhookCreated) {
+                return {
+                  updated: false,
+                  message: newMessage,
+                  reason: `Failed to create required webhook for team ${team || 'unknown'}`,
+                };
+              }
+            }
+            
             expectedWebhooks.add(`@${webhookName}`);
           }
 

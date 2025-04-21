@@ -320,7 +320,7 @@ function validateMappings(
     if (nullMappings.length > 0) {
       console.log(
         kleur.yellow(
-          `  ! ${nullMappings.length} PagerDuty services have incomplete mappings (null team):`,
+          `  ! ${nullMappings.length} PagerDuty services are found in the config but don't have teams assigned:`,
         ),
       );
       nullMappings.forEach((service) => {
@@ -355,7 +355,7 @@ ${JSON.stringify(exampleMappings, null, 2)}
     if (nullMappings.length > 0) {
       console.log(
         kleur.cyan(
-          "\nComplete the team names for these services in your mappings file.",
+          "\nPlease assign incident.io teams to these services in your config using an alias from Catalog in incident.io.",
         ),
       );
     }
@@ -367,6 +367,13 @@ ${JSON.stringify(exampleMappings, null, 2)}
  */
 function displayMonitorDetails(monitors: DatadogMonitor[]): void {
   console.log(kleur.bold("\nMonitor Details:"));
+  
+  // Display each monitor's tags first
+  console.log(kleur.bold("\nMonitor Tags:"));
+  monitors.forEach((monitor) => {
+    console.log(`  ${kleur.bold(`#${monitor.id}`)}: ${monitor.name}`);
+    console.log(`    Tags: ${monitor.tags.length > 0 ? monitor.tags.join(', ') : 'No tags'}`);
+  });
 
   // Group monitors by their notification configuration
   const pdOnly = monitors.filter((monitor) => {

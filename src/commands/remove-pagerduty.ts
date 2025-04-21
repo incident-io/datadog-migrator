@@ -104,7 +104,7 @@ export function registerRemovePagerdutyCommand(program: Command): void {
             filter: filterOptions,
           });
 
-          displayMigrationResults(spinner, result, options)
+          displayMigrationResults(spinner, 'remove', result, options)
         } catch (error) {
           console.error(
             kleur.red(

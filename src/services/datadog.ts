@@ -2,8 +2,16 @@ import { client, v1 } from "@datadog/datadog-api-client";
 import { DatadogMonitor } from "@/types";
 import { debug } from "@/utils/config";
 
+interface DatadogWebhook {
+  name: string;
+  url: string;
+  payload: string;
+  customHeaders?: string;
+}
+
 export class DatadogService {
   private monitorsApi: v1.MonitorsApi;
+  private webhooksApi: v1.WebhooksIntegrationApi;
 
   constructor({ apiKey, appKey }: { apiKey: string; appKey: string }) {
     // Validate credentials
@@ -24,6 +32,7 @@ export class DatadogService {
     debug("Created Datadog API client configuration");
 
     this.monitorsApi = new v1.MonitorsApi(configuration);
+    this.webhooksApi = new v1.WebhooksIntegrationApi(configuration);
   }
 
   async getMonitors(): Promise<DatadogMonitor[]> {
@@ -99,6 +108,50 @@ export class DatadogService {
         throw new Error(`Failed to update monitor ${id}: ${error.message}`);
       }
       throw error;
+    }
+  }
+
+  async createWebhook(webhook: DatadogWebhook): Promise<void> {
+    try {
+      debug(`Creating webhook: ${webhook.name}`);
+      
+      // Format custom headers as JSON if it's not already
+      let headers = webhook.customHeaders;
+      if (headers && !headers.startsWith('{')) {
+        headers = JSON.stringify({ 'Authorization': `Bearer ${headers}` });
+      }
+      
+      await this.webhooksApi.createWebhooksIntegration({
+        body: {
+          name: webhook.name,
+          url: webhook.url,
+          payload: webhook.payload,
+          customHeaders: headers,
+          encodeAs: "json"
+        },
+      });
+      debug(`Successfully created webhook: ${webhook.name}`);
+    } catch (error) {
+      debug(`Error creating webhook ${webhook.name}: ${String(error)}`);
+      console.error(`Error creating webhook ${webhook.name}:`, error);
+      if (error instanceof Error) {
+        throw new Error(`Failed to create webhook ${webhook.name}: ${error.message}`);
+      }
+      throw error;
+    }
+  }
+
+  async getWebhook(name: string): Promise<v1.WebhooksIntegration | null> {
+    try {
+      debug(`Getting webhook: ${name}`);
+      const webhook = await this.webhooksApi.getWebhooksIntegration({
+        webhookName: name,
+      });
+      return webhook;
+    } catch (error) {
+      // If the webhook doesn't exist, we'll get a 404
+      debug(`Webhook ${name} not found or error: ${String(error)}`);
+      return null;
     }
   }
 }

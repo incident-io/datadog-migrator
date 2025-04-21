@@ -93,7 +93,7 @@ export function registerAddIncidentioCommand(program: Command): void {
             validateMappings: options.validateMappings,
           });
 
-          displayMigrationResults(spinner, result, options);
+          displayMigrationResults(spinner, 'add', result, options);
         } catch (error) {
           console.error(
             kleur.red(
