@@ -2,7 +2,6 @@ import fs from "fs";
 import path from "path";
 import { MigrationConfig } from "@/types";
 
-
 // Global debug logging function
 export function debug(message: string, ...args: unknown[]) {
   if (process.env.DEBUG) {
@@ -39,7 +38,7 @@ export function loadConfig(
         webhookUrl: undefined,
         webhookToken: undefined,
       };
-      
+
       // Save the updated config back to the file
       if (create) {
         fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
@@ -68,6 +67,8 @@ export function createDefaultConfig(): MigrationConfig {
       webhookPerTeam: false,
       webhookUrl: undefined,
       webhookToken: undefined,
+      addTeamTags: false,
+      teamTagPrefix: "team",
     },
     mappings: [],
   };

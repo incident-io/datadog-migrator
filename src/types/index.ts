@@ -2,6 +2,8 @@ export interface IncidentioConfig {
   webhookPerTeam: boolean;
   webhookUrl?: string;
   webhookToken?: string;
+  addTeamTags?: boolean;
+  teamTagPrefix?: string;
 }
 
 export interface MigrationMapping {
@@ -38,7 +40,7 @@ export interface FilterOptions {
 export interface MigrationOptions {
   dryRun?: boolean;
   type: MigrationType;
-  singleWebhook?: boolean;
+  webhookPerTeam?: boolean;
   verbose?: boolean;
   filter?: FilterOptions;
 }

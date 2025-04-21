@@ -4,7 +4,7 @@ import kleur from "kleur";
 import ora, { Ora } from "ora";
 
 import { DatadogService } from "@/services/datadog";
-import { MigrationService } from "@/services/migration";
+import { MigrationResult, MigrationService } from "@/services/migration";
 import { loadConfig } from "@/utils/config";
 import { formatMessageDiff } from "@/utils/diff";
 import { MigrationType } from "@/types";
@@ -97,7 +97,7 @@ export function registerRemoveIncidentioCommand(program: Command): void {
             filter: filterOptions,
           });
 
-          displayMigrationResults(spinner, 'remove', result, options);
+          displayMigrationResults(spinner, "remove", result, options);
         } catch (error) {
           console.error(
             kleur.red(
@@ -112,20 +112,8 @@ export function registerRemoveIncidentioCommand(program: Command): void {
 
 export const displayMigrationResults = (
   spinner: Ora,
-  type: 'add' | 'remove',
-  result: {
-    processed: number;
-    updated: number;
-    unchanged: number;
-    errors: { id: number; error: string }[];
-    changes?: {
-      id: number;
-      name: string;
-      before: string;
-      after: string;
-      reason?: string;
-    }[];
-  },
+  type: "add" | "remove",
+  result: MigrationResult,
   options: {
     dryRun?: boolean;
     verbose?: boolean;
@@ -143,12 +131,35 @@ export const displayMigrationResults = (
   if (result.changes && result.changes.length > 0) {
     console.log(kleur.bold("\nChanges:"));
     for (const change of result.changes) {
-      if (change.before !== change.after) {
+      if (
+        change.before !== change.after ||
+        (change.tagsBefore && change.tagsAfter)
+      ) {
         console.log(kleur.bold(`\nMonitor #${change.id}: ${change.name}`));
-        console.log(kleur.yellow("Before:"));
-        console.log(`  ${type === 'add' ? change.before : formatMessageDiff(change.before, change.after, type)}`);
-        console.log(kleur.green("After:"));
-        console.log(`  ${type === 'add' ? formatMessageDiff(change.before, change.after, type) : change.after}`);
+
+        // Show message changes
+        if (change.before !== change.after) {
+          console.log(kleur.yellow("Before:"));
+          console.log(
+            `  ${type === "add" ? change.before : formatMessageDiff(change.before, change.after, type)}`,
+          );
+          console.log(kleur.green("After:"));
+          console.log(
+            `  ${type === "add" ? formatMessageDiff(change.before, change.after, type) : change.after}`,
+          );
+        }
+
+        // Show tag changes if present
+        if (change.tagsBefore && change.tagsAfter) {
+          const addedTags = change.tagsAfter.filter(
+            (tag) => !change.tagsBefore?.includes(tag),
+          );
+
+          if (addedTags.length > 0) {
+            console.log(kleur.green("Added Tags:"));
+            console.log(`  ${addedTags.join(", ")}`);
+          }
+        }
       } else if (options.verbose && change.reason) {
         console.log(kleur.bold(`\nMonitor #${change.id}: ${change.name}`));
         console.log(`  ${kleur.gray(`[Unchanged - ${change.reason}]`)}`);

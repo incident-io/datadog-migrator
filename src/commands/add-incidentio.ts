@@ -41,7 +41,6 @@ export function registerAddIncidentioCommand(program: Command): void {
         appKey: string;
         config: string;
         dryRun?: boolean;
-        singleWebhook?: boolean;
         verbose?: boolean;
         tags?: string;
         name?: string;
@@ -62,14 +61,21 @@ export function registerAddIncidentioCommand(program: Command): void {
           // Confirm action if not in dry run mode
           if (!options.dryRun) {
             spinner.stop();
-            const webhookType = options.singleWebhook || !incidentioConfig.webhookPerTeam 
-              ? "a single incident.io webhook (@webhook-incident-io)" 
+            const webhookType = !incidentioConfig.webhookPerTeam
+              ? "a single incident.io webhook (@webhook-incident-io)"
               : "team-specific incident.io webhooks (@webhook-incident-io-team)";
+
+            // Show tag message if enabled
+            const tagMessage =
+              !incidentioConfig.webhookPerTeam && incidentioConfig.addTeamTags
+                ? ` and add team tags (${incidentioConfig.teamTagPrefix}:team-name)`
+                : "";
+
             const { confirmed } = await inquirer.prompt([
               {
                 type: "confirm",
                 name: "confirmed",
-                message: `This will add ${webhookType} to monitors with PagerDuty services. Continue?`,
+                message: `This will add ${webhookType}${tagMessage} to monitors with PagerDuty services.${!incidentioConfig.webhookPerTeam && incidentioConfig.addTeamTags ? "\n  Team tags will be derived from your PagerDuty-to-team mappings in config.json." : ""}\n  Continue?`,
                 default: false,
               },
             ]);
@@ -105,12 +111,12 @@ export function registerAddIncidentioCommand(program: Command): void {
           const result = await migrationService.migrateMonitors({
             type: MigrationType.ADD_INCIDENTIO_WEBHOOK,
             dryRun: dryRunMode,
-            singleWebhook: options.singleWebhook,
+            webhookPerTeam: incidentioConfig.webhookPerTeam,
             verbose: options.verbose,
             filter: filterOptions,
           });
 
-          displayMigrationResults(spinner, 'add', result, options);
+          displayMigrationResults(spinner, "add", result, options);
         } catch (error) {
           console.error(
             kleur.red(
