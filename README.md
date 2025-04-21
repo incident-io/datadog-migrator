@@ -1,6 +1,6 @@
-# Datadog Migrator
+# Datadog PagerDuty Migrator
 
-A CLI tool to help migrate Datadog monitors between notification systems, specifically designed for transitioning between PagerDuty and incident.io.
+A CLI tool to help migrate Datadog monitors over from PagerDuty to incident.io.
 
 ## Features
 
