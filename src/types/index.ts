@@ -1,7 +1,3 @@
-export interface DatadogCredentials {
-  apiKey: string;
-  appKey: string;
-}
 
 export interface DatadogConfig {
   baseUrl?: string;
@@ -35,9 +31,9 @@ export interface DatadogMonitor {
 }
 
 export enum MigrationType {
-  ADD_INCIDENTIO_WEBHOOK = 'add_incidentio',
-  REMOVE_INCIDENTIO_WEBHOOK = 'remove_incidentio',
-  REMOVE_PAGERDUTY = 'remove_pagerduty',
+  ADD_INCIDENTIO_WEBHOOK = "add_incidentio",
+  REMOVE_INCIDENTIO_WEBHOOK = "remove_incidentio",
+  REMOVE_PAGERDUTY = "remove_pagerduty",
 }
 
 export interface FilterOptions {

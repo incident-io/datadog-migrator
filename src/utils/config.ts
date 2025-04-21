@@ -1,21 +1,24 @@
-import fs from 'fs';
-import path from 'path';
-import { MigrationConfig, MigrationMapping } from '../types';
+import fs from "fs";
+import path from "path";
+import { MigrationConfig } from "@/types";
 
 // Enable or disable debug logging
 export const DEBUG = false;
 
 // Global debug logging function
-export function debug(message: string, ...args: any[]) {
+export function debug(message: string, ...args: unknown[]) {
   if (DEBUG) {
     console.log(`[DEBUG] ${message}`, ...args);
   }
 }
 
-export function loadConfig(filePath: string, create: boolean = false): MigrationConfig {
+export function loadConfig(
+  filePath: string,
+  create: boolean = false,
+): MigrationConfig {
   try {
     const configPath = path.resolve(filePath);
-    
+
     // Check if file exists
     if (!fs.existsSync(configPath)) {
       if (create) {
@@ -28,8 +31,8 @@ export function loadConfig(filePath: string, create: boolean = false): Migration
         throw new Error(`Config file not found: ${configPath}`);
       }
     }
-    
-    const configContent = fs.readFileSync(configPath, 'utf8');
+
+    const configContent = fs.readFileSync(configPath, "utf8");
     const config = JSON.parse(configContent) as MigrationConfig;
 
     // Validate config structure
@@ -37,20 +40,26 @@ export function loadConfig(filePath: string, create: boolean = false): Migration
       config.datadogConfig = {}; // Create if missing
     }
 
-    if (!config.incidentioConfig || !config.incidentioConfig.webhookNameFormat) {
+    if (
+      !config.incidentioConfig ||
+      !config.incidentioConfig.webhookNameFormat
+    ) {
       if (!config.incidentioConfig) {
         config.incidentioConfig = {
-          webhookNameFormat: 'webhook-incident-io-{team}',
-          defaultWebhook: 'webhook-incident-io'
+          webhookNameFormat: "webhook-incident-io-{team}",
+          defaultWebhook: "webhook-incident-io",
         };
       } else if (!config.incidentioConfig.webhookNameFormat) {
-        config.incidentioConfig.webhookNameFormat = 'webhook-incident-io-{team}';
+        config.incidentioConfig.webhookNameFormat =
+          "webhook-incident-io-{team}";
       }
-      
+
       // Save the updated config back to the file
       if (create) {
         fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
-        console.log(`Updated config file with default incident.io configuration`);
+        console.log(
+          `Updated config file with default incident.io configuration`,
+        );
       }
     }
 
@@ -70,39 +79,12 @@ export function loadConfig(filePath: string, create: boolean = false): Migration
 export function createDefaultConfig(): MigrationConfig {
   return {
     datadogConfig: {
-      baseUrl: 'https://api.datadoghq.com/api/v1'
+      baseUrl: "https://api.datadoghq.com/api/v1",
     },
     incidentioConfig: {
-      webhookNameFormat: 'webhook-incident-io-{team}',
-      defaultWebhook: 'webhook-incident-io'
+      webhookNameFormat: "webhook-incident-io-{team}",
+      defaultWebhook: "webhook-incident-io",
     },
-    mappings: []
+    mappings: [],
   };
-}
-
-export function updateConfigMappings(configPath: string, mappings: MigrationMapping[]): void {
-  try {
-    // Load existing config or create new one if it doesn't exist
-    let config: MigrationConfig;
-    try {
-      config = loadConfig(configPath, true); // Create if it doesn't exist
-    } catch (error) {
-      // If loading fails, create a new default config
-      config = createDefaultConfig();
-    }
-    
-    // Update the mappings
-    config.mappings = mappings;
-    
-    // Write the updated config back to the file
-    const dirPath = path.dirname(configPath);
-    if (!fs.existsSync(dirPath)) {
-      fs.mkdirSync(dirPath, { recursive: true });
-    }
-    
-    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
-    console.log(`Updated mappings in config file: ${configPath}`);
-  } catch (error) {
-    throw new Error(`Failed to update mappings in config: ${error instanceof Error ? error.message : String(error)}`);
-  }
 }
