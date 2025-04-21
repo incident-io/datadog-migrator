@@ -1,8 +1,9 @@
-name: Build Binaries
+name: Build and Release
 
 on:
   push:
-    branches: [ master ]
+    tags:
+      - 'v*' # Run when tag matches v*, e.g., v1.0.0, v2.1.3
   workflow_dispatch:
     # Allow manual triggering
 
@@ -64,16 +65,65 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
     
     steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 # Fetch all history for changelog generation
+    
+    - name: Get version from tag
+      id: get_version
+      run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
+      
     - name: Download all artifacts
       uses: actions/download-artifact@v4
       with:
         path: binaries
+    
+    - name: Prepare binaries for release
+      run: |
+        mkdir -p release
+        
+        # Copy each binary to release directory with version in filename
+        find binaries -type f -name "datadog-migrator-*" | while read -r file; do
+          filename=$(basename "$file")
+          cp "$file" "release/${filename%.exe}-${{ env.VERSION }}${filename##*.exe}"
+          
+          # Add .exe extension for Windows binaries
+          if [[ "$filename" == *windows* ]]; then
+            mv "release/${filename%.exe}-${{ env.VERSION }}" "release/${filename%.exe}-${{ env.VERSION }}.exe"
+          fi
+        done
+        
+        # Create SHA256 checksums
+        cd release
+        sha256sum * > SHA256SUMS.txt
+      shell: bash
+    
+    - name: Generate changelog
+      id: changelog
+      uses: metcalfc/changelog-generator@v4.0.1
+      with:
+        myToken: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Create Release
       id: create_release
       uses: softprops/action-gh-release@v1
       with:
-        files: binaries/**/*
+        files: release/*
+        name: Datadog Migrator v${{ env.VERSION }}
+        body: |
+          # Datadog Migrator v${{ env.VERSION }}
+          
+          ## What's Changed
+          ${{ steps.changelog.outputs.changelog }}
+          
+          ## Assets
+          
+          Download the appropriate binary for your system:
+          - **macOS Intel**: `datadog-migrator-darwin-x64-${{ env.VERSION }}`
+          - **macOS Apple Silicon**: `datadog-migrator-darwin-arm64-${{ env.VERSION }}`
+          - **Linux**: `datadog-migrator-linux-x64-${{ env.VERSION }}`
+          - **Windows**: `datadog-migrator-windows-x64-${{ env.VERSION }}.exe`
+          
+          Verify checksums with `SHA256SUMS.txt`.
         draft: false
         prerelease: false
-        generate_release_notes: true

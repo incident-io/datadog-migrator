@@ -21,10 +21,14 @@ A CLI tool to help migrate Datadog monitors between notification systems, specif
 You can download the latest binary release from the [GitHub Releases](https://github.com/incident-io/datadog-migrator/releases) page.
 
 Choose the appropriate binary for your system:
-- **macOS Intel**: `datadog-migrator-darwin-x64`
-- **macOS Apple Silicon**: `datadog-migrator-darwin-arm64`
-- **Linux**: `datadog-migrator-linux-x64`
-- **Windows**: `datadog-migrator-windows-x64.exe`
+- **macOS Intel**: `datadog-migrator-darwin-x64-VERSION`
+- **macOS Apple Silicon**: `datadog-migrator-darwin-arm64-VERSION`
+- **Linux**: `datadog-migrator-linux-x64-VERSION`
+- **Windows**: `datadog-migrator-windows-x64-VERSION.exe`
+
+Where `VERSION` is the version number (e.g., `1.0.0`).
+
+You can verify the integrity of the downloaded binary using the `SHA256SUMS.txt` file provided with each release.
 
 Make the binary executable (Linux/macOS):
 
@@ -205,6 +209,21 @@ If you want to build the binaries yourself:
 4. Generate binaries with `yarn build:binary`
 
 The binaries will be available in the `dist` directory.
+
+## Releasing new versions
+
+To create a new release:
+
+1. Update the version in `package.json`
+2. Create a git tag for the version:
+   ```bash
+   git tag v1.0.0  # Replace with your version
+   ```
+3. Push the tag to GitHub:
+   ```bash
+   git push origin v1.0.0
+   ```
+4. The GitHub Actions workflow will automatically build binaries and create a release
 
 ## License
 
