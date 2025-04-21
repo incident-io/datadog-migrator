@@ -108,11 +108,6 @@ You can configure the tool using a JSON configuration file:
 
 ```json
 {
-  "datadogConfig": {
-    "apiKey": "your_api_key",
-    "appKey": "your_app_key",
-    "baseUrl": "https://api.datadoghq.com/api/v1"
-  },
   "incidentioConfig": {
     "webhookNameFormat": "webhook-incident-io-{team}",
     "defaultWebhook": "webhook-incident-io"

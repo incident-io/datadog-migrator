@@ -4,7 +4,8 @@ import {
   MigrationMapping,
   MigrationType,
   MigrationOptions,
-  IncidentioConfig, FilterOptions,
+  IncidentioConfig,
+  FilterOptions,
 } from "../types";
 import { debug } from "../utils/config";
 

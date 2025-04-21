@@ -1,10 +1,3 @@
-
-export interface DatadogConfig {
-  baseUrl?: string;
-  apiKey?: string;
-  appKey?: string;
-}
-
 export interface IncidentioConfig {
   webhookNameFormat: string;
   defaultWebhook?: string;
@@ -18,7 +11,6 @@ export interface MigrationMapping {
 
 export interface MigrationConfig {
   mappings: MigrationMapping[];
-  datadogConfig: DatadogConfig;
   incidentioConfig: IncidentioConfig;
 }
 

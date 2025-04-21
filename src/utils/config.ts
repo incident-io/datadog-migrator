@@ -35,11 +35,6 @@ export function loadConfig(
     const configContent = fs.readFileSync(configPath, "utf8");
     const config = JSON.parse(configContent) as MigrationConfig;
 
-    // Validate config structure
-    if (!config.datadogConfig) {
-      config.datadogConfig = {}; // Create if missing
-    }
-
     if (
       !config.incidentioConfig ||
       !config.incidentioConfig.webhookNameFormat
@@ -78,9 +73,6 @@ export function loadConfig(
 
 export function createDefaultConfig(): MigrationConfig {
   return {
-    datadogConfig: {
-      baseUrl: "https://api.datadoghq.com/api/v1",
-    },
     incidentioConfig: {
       webhookNameFormat: "webhook-incident-io-{team}",
       defaultWebhook: "webhook-incident-io",

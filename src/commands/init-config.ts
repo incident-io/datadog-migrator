@@ -12,8 +12,16 @@ export function registerInitConfigCommand(program: Command): void {
   program
     .command("init")
     .description("Initialize a new configuration file")
-    .requiredOption("-k, --api-key <key>", "Datadog API key", process.env.DATADOG_API_KEY)
-    .requiredOption("-a, --app-key <key>", "Datadog App key", process.env.DATADOG_APP_KEY)
+    .requiredOption(
+      "-k, --api-key <key>",
+      "Datadog API key",
+      process.env.DATADOG_API_KEY,
+    )
+    .requiredOption(
+      "-a, --app-key <key>",
+      "Datadog App key",
+      process.env.DATADOG_APP_KEY,
+    )
     .option(
       "-p, --path <path>",
       "Path to save the config file",
@@ -153,9 +161,10 @@ export function registerInitConfigCommand(program: Command): void {
           spinner.start("Detecting PagerDuty services from monitors");
 
           try {
-            const datadogService = new DatadogService(
-              defaultConfig.datadogConfig,
-            );
+            const datadogService = new DatadogService({
+              apiKey: options.apiKey,
+              appKey: options.appKey,
+            });
 
             // Get all monitors to detect PagerDuty services
             const monitors = await datadogService.getMonitors();

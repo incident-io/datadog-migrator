@@ -26,67 +26,69 @@ export function registerAnalyzeCommand(program: Command): void {
     .option("-n, --name <pattern>", "Filter monitors by name pattern")
     .option("-m, --message <pattern>", "Filter monitors by message pattern")
     .option("--show-monitors", "Show detailed list of monitors")
-    .action(async (options:{
-      apiKey: string;
-      appKey: string;
-      config: string;
-      tags?: string;
-      name?: string;
-      message?: string;
-      showMonitors?: boolean;
-    }) => {
-      const config = loadConfig(options.config);
-      const mappings = config.mappings;
-      try {
-        const datadogService = new DatadogService({
-          apiKey: options.apiKey,
-          appKey: options.appKey,
-        });
-
-        // Verify connection
-        const spinner = ora("Connecting to Datadog API").start();
-        let monitors: DatadogMonitor[];
-
+    .action(
+      async (options: {
+        apiKey: string;
+        appKey: string;
+        config: string;
+        tags?: string;
+        name?: string;
+        message?: string;
+        showMonitors?: boolean;
+      }) => {
+        const config = loadConfig(options.config);
+        const mappings = config.mappings;
         try {
-          monitors = await datadogService.getMonitors();
-          spinner.succeed("Connected to Datadog API");
+          const datadogService = new DatadogService({
+            apiKey: options.apiKey,
+            appKey: options.appKey,
+          });
+
+          // Verify connection
+          const spinner = ora("Connecting to Datadog API").start();
+          let monitors: DatadogMonitor[];
+
+          try {
+            monitors = await datadogService.getMonitors();
+            spinner.succeed("Connected to Datadog API");
+          } catch (error) {
+            spinner.fail("Failed to connect to Datadog API");
+            console.error(
+              kleur.red(
+                `Error: ${error instanceof Error ? error.message : String(error)}`,
+              ),
+            );
+            process.exit(1);
+          }
+
+          // Apply filters if provided
+          const filteredMonitors = filterMonitors(monitors, options);
+
+          // Analyze the monitors
+          spinner.start("Analyzing monitors");
+          const stats = analyzeMonitors(filteredMonitors);
+          spinner.succeed("Analysis complete");
+
+          // Display the stats
+          displayStats(stats, filteredMonitors.length);
+
+          // Display mapping validation
+          validateMappings(stats, mappings);
+
+          // Show detailed monitor list if requested
+          if (options.showMonitors) {
+            displayMonitorDetails(filteredMonitors);
+          }
         } catch (error) {
-          spinner.fail("Failed to connect to Datadog API");
           console.error(
             kleur.red(
-              `Error: ${error instanceof Error ? error.message : String(error)}`,
+              `\nError: ${error instanceof Error ? error.message : String(error)}`,
             ),
           );
           process.exit(1);
         }
-
-        // Apply filters if provided
-        const filteredMonitors = filterMonitors(monitors, options);
-
-        // Analyze the monitors
-        spinner.start("Analyzing monitors");
-        const stats = analyzeMonitors(filteredMonitors);
-        spinner.succeed("Analysis complete");
-
-        // Display the stats
-        displayStats(stats, filteredMonitors.length);
-
-        // Display mapping validation
-        validateMappings(stats, mappings);
-
-        // Show detailed monitor list if requested
-        if (options.showMonitors) {
-          displayMonitorDetails(filteredMonitors);
-        }
-      } catch (error) {
-        console.error(
-          kleur.red(
-            `\nError: ${error instanceof Error ? error.message : String(error)}`,
-          ),
-        );
-        process.exit(1);
-      }
-    });
+      },
+    );
 }
 
 /**
@@ -146,9 +148,7 @@ interface MonitorStats {
 /**
  * Analyze monitors to get statistics
  */
-function analyzeMonitors(
-  monitors: DatadogMonitor[],
-): MonitorStats {
+function analyzeMonitors(monitors: DatadogMonitor[]): MonitorStats {
   const stats: MonitorStats = {
     total: monitors.length,
     pagerduty: {
@@ -275,7 +275,10 @@ function displayStats(stats: MonitorStats, totalFiltered: number): void {
 /**
  * Validate mappings against detected PagerDuty services
  */
-function validateMappings(stats: MonitorStats, mappings: MigrationMapping[]): void {
+function validateMappings(
+  stats: MonitorStats,
+  mappings: MigrationMapping[],
+): void {
   const services = Object.keys(stats.pagerduty.services);
 
   // Create a map of services to their team mappings
@@ -363,9 +366,7 @@ ${JSON.stringify(exampleMappings, null, 2)}
 /**
  * Display detailed information about monitors
  */
-function displayMonitorDetails(
-  monitors: DatadogMonitor[],
-): void {
+function displayMonitorDetails(monitors: DatadogMonitor[]): void {
   console.log(kleur.bold("\nMonitor Details:"));
 
   // Group monitors by their notification configuration
