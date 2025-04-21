@@ -9,10 +9,8 @@
     "outDir": "dist",
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["src/*"]
-    }
+    "allowImportingTsExtensions": true,
+    "baseUrl": "."
   },
   "include": ["src/**/*"]
 }

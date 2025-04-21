@@ -1,4 +1,4 @@
-import { DatadogService } from "./datadog";
+import { DatadogService } from "./datadog.ts";
 import {
   DatadogMonitor,
   FilterOptions,
@@ -6,8 +6,8 @@ import {
   MigrationMapping,
   MigrationOptions,
   MigrationType,
-} from "@/types";
-import { debug } from "@/utils/config";
+} from "../types/index.ts";
+import { debug } from "../utils/config.ts";
 
 export type MigrationChange = {
   id: number;
@@ -141,7 +141,7 @@ export class MigrationService {
     return monitors.filter((monitor) => {
       // Filter by tags
       if (filterOptions.tags && filterOptions.tags.length > 0) {
-        if (!monitor.tags.some((tag) => filterOptions.tags!.includes(tag))) {
+        if (!monitor.tags.some((tag: string) => filterOptions.tags!.includes(tag))) {
           return false;
         }
       }

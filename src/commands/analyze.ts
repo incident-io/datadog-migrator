@@ -3,9 +3,9 @@ import kleur from "kleur";
 import ora from "ora";
 import boxen from "boxen";
 
-import { DatadogService } from "@/services/datadog";
-import { loadConfig } from "@/utils/config";
-import { DatadogMonitor, MigrationMapping } from "@/types";
+import { DatadogService } from "../services/datadog.ts";
+import { loadConfig } from "../utils/config.ts";
+import { DatadogMonitor, MigrationMapping } from "../types/index.ts";
 
 export function registerAnalyzeCommand(program: Command): void {
   program
@@ -14,12 +14,12 @@ export function registerAnalyzeCommand(program: Command): void {
     .option(
       "-k, --api-key <key>",
       "Datadog API key",
-      process.env.DATADOG_API_KEY,
+      Deno.env.get("DATADOG_API_KEY"),
     )
     .option(
       "-a, --app-key <key>",
       "Datadog App key",
-      process.env.DATADOG_APP_KEY,
+      Deno.env.get("DATADOG_APP_KEY"),
     )
     .requiredOption("-c, --config <path>", "Path to config file")
     .option("-t, --tags <tags>", "Filter monitors by tags (comma-separated)")
@@ -57,7 +57,7 @@ export function registerAnalyzeCommand(program: Command): void {
                 `Error: ${error instanceof Error ? error.message : String(error)}`,
               ),
             );
-            process.exit(1);
+            Deno.exit(1);
           }
 
           // Apply filters if provided
@@ -84,7 +84,7 @@ export function registerAnalyzeCommand(program: Command): void {
               `\nError: ${error instanceof Error ? error.message : String(error)}`,
             ),
           );
-          process.exit(1);
+          Deno.exit(1);
         }
       },
     );

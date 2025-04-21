@@ -3,12 +3,12 @@
 import { Command } from "commander";
 import dotenv from "dotenv";
 
-import { displayBanner } from "./utils/banner.js";
-import { registerAddIncidentioCommand } from "./commands/add-incidentio.js";
-import { registerRemoveIncidentioCommand } from "./commands/remove-incidentio.js";
-import { registerRemovePagerdutyCommand } from "./commands/remove-pagerduty.js";
-import { registerInitConfigCommand } from "./commands/init-config.js";
-import { registerAnalyzeCommand } from "./commands/analyze.js";
+import { displayBanner } from "./utils/banner.ts";
+import { registerAddIncidentioCommand } from "./commands/add-incidentio.ts";
+import { registerRemoveIncidentioCommand } from "./commands/remove-incidentio.ts";
+import { registerRemovePagerdutyCommand } from "./commands/remove-pagerduty.ts";
+import { registerInitConfigCommand } from "./commands/init-config.ts";
+import { registerAnalyzeCommand } from "./commands/analyze.ts";
 
 // Load environment variables from .env file
 dotenv.config();
@@ -35,9 +35,9 @@ registerRemoveIncidentioCommand(program);
 registerRemovePagerdutyCommand(program);
 
 // Parse command line arguments
-program.parse(process.argv);
+program.parse(Deno.args);
 
 // Show help if no command is provided
-if (!process.argv.slice(2).length) {
+if (!Deno.args.slice(2).length) {
   program.outputHelp();
 }

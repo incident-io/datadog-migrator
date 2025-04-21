@@ -1,12 +1,13 @@
 import { Command } from "commander";
 import inquirer from "inquirer";
-import fs from "fs";
-import path from "path";
+import fs from "node:fs";
+import path from "node:path";
 import kleur from "kleur";
 import ora from "ora";
 
-import { createDefaultConfig } from "@/utils/config";
-import { DatadogService } from "@/services/datadog";
+import { createDefaultConfig } from "../utils/config.ts";
+import { DatadogService } from "../services/datadog.ts";
+import { MigrationMapping } from "../types/index.ts";
 
 export function registerInitConfigCommand(program: Command): void {
   program
@@ -15,12 +16,12 @@ export function registerInitConfigCommand(program: Command): void {
     .requiredOption(
       "-k, --api-key <key>",
       "Datadog API key",
-      process.env.DATADOG_API_KEY,
+      Deno.env.get("DATADOG_API_KEY"),
     )
     .requiredOption(
       "-a, --app-key <key>",
       "Datadog App key",
-      process.env.DATADOG_APP_KEY,
+      Deno.env.get("DATADOG_APP_KEY"),
     )
     .option(
       "-p, --path <path>",
@@ -229,7 +230,7 @@ export function registerInitConfigCommand(program: Command): void {
             if (pagerDutyServices.length > 0) {
               // Create mappings for detected services (excluding ones already manually added)
               const existingServices = new Set(
-                defaultConfig.mappings.map((m) => m.pagerdutyService),
+                defaultConfig.mappings.map((m: MigrationMapping) => m.pagerdutyService),
               );
               const newMappings = [];
 

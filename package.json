@@ -2,22 +2,30 @@
   "name": "datadog-migrator",
   "version": "0.0.1",
   "main": "dist/index.js",
-  "type": "module",
+  "type": "commonjs",
   "bin": {
     "datadog-migrator": "./dist/index.js"
+  },
+  "pkg": {
+    "targets": [
+      "node18-macos-x64",
+      "node18-macos-arm64",
+      "node18-linux-x64",
+      "node18-win-x64"
+    ],
+    "outputPath": "dist"
   },
   "repository": "git@github.com:incident-io/datadog-migrator.git",
   "author": "Rory Bain <rorydbain@gmail.com>",
   "license": "MIT",
   "scripts": {
-    "build": "tsup src/index.ts --format cjs,esm --dts",
-    "build:binary": "node scripts/build-binaries.js",
-    "build:all": "yarn build:binary",
     "start": "tsx src/index.ts",
     "dev": "tsx watch src/index.ts",
     "lint": "eslint . --ext .ts",
     "test": "jest",
-    "format": "prettier --cache --write './**/*.{ts,tsx,scss}' && eslint --fix . --ext .ts,.tsx --cache"
+    "format": "prettier --cache --write './**/*.{ts,tsx,scss}' && eslint --fix . --ext .ts,.tsx --cache",
+    "build": "tsup src/index.ts --format cjs --clean",
+    "build:binary": "yarn build && yarn pkg ."
   },
   "devDependencies": {
     "@eslint/js": "^9.25.0",
@@ -49,12 +57,5 @@
     "ora": "^8.2.0",
     "prettier": "^3.5.3"
   },
-  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e",
-  "pkg": {
-    "targets": [ "node18-linux-x64", "node18-darwin-x64", "node18-darwin-arm64", "node18-win-x64" ],
-    "outputPath": "dist",
-    "assets": [
-      "node_modules/**/*"
-    ]
-  }
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }

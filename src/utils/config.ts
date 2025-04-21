@@ -1,10 +1,10 @@
-import fs from "fs";
-import path from "path";
-import { MigrationConfig } from "@/types";
+import fs from "node:fs";
+import path from "node:path"
+import { MigrationConfig } from "../types/index.ts";
 
 // Global debug logging function
 export function debug(message: string, ...args: unknown[]) {
-  if (process.env.DEBUG) {
+  if (Deno.env.get("DEBUG")) {
     console.log(`[DEBUG] ${message}`, ...args);
   }
 }

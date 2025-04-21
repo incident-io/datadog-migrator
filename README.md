@@ -204,9 +204,18 @@ DATADOG_APP_KEY=your_app_key_here
 If you want to build the binaries yourself:
 
 1. Clone the repository
-2. Install dependencies with `yarn install`
-3. Build the project with `yarn build`
-4. Generate binaries with `yarn build:binary`
+2. Install [Deno](https://deno.land/#installation) if you don't have it already
+3. Build the project with:
+   ```bash
+   deno task build
+   ```
+4. Or build platform-specific binaries:
+   ```bash
+   deno task build:mac      # macOS Intel
+   deno task build:mac-arm  # macOS Apple Silicon
+   deno task build:linux    # Linux
+   deno task build:windows  # Windows
+   ```
 
 The binaries will be available in the `dist` directory.
 

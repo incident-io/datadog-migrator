@@ -1,4 +1,4 @@
-import { FilterOptions } from "@/types/index";
+import { FilterOptions } from "./index.ts";
 
 /**
  * Prepare filter options from command arguments

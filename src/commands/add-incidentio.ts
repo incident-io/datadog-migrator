@@ -3,12 +3,12 @@ import kleur from "kleur";
 import ora from "ora";
 import inquirer from "inquirer";
 
-import { DatadogService } from "@/services/datadog";
-import { MigrationService } from "@/services/migration";
-import { debug, loadConfig } from "@/utils/config";
-import { MigrationType } from "@/types";
-import { prepareFilterOptions } from "@/types/prepareFilterOptions";
-import { displayMigrationResults } from "@/commands/remove-incidentio";
+import { DatadogService } from "../services/datadog.ts";
+import { MigrationService } from "../services/migration.ts";
+import { debug, loadConfig } from "../utils/config.ts";
+import { MigrationType } from "../types/index.ts";
+import { prepareFilterOptions } from "../types/prepareFilterOptions.ts";
+import { displayMigrationResults } from "./remove-incidentio.ts";
 
 export function registerAddIncidentioCommand(program: Command): void {
   program
@@ -17,12 +17,12 @@ export function registerAddIncidentioCommand(program: Command): void {
     .option(
       "-k, --api-key <key>",
       "Datadog API key",
-      process.env.DATADOG_API_KEY,
+      Deno.env.get("DATADOG_API_KEY"),
     )
     .option(
       "-a, --app-key <key>",
       "Datadog App key",
-      process.env.DATADOG_APP_KEY,
+      Deno.env.get("DATADOG_APP_KEY"),
     )
     .requiredOption("-c, --config <path>", "Path to config file")
     .option("-d, --dry-run", "Dry run mode (no actual changes)")
@@ -82,7 +82,7 @@ export function registerAddIncidentioCommand(program: Command): void {
 
             if (!confirmed) {
               console.log(kleur.yellow("Operation cancelled."));
-              process.exit(0);
+              Deno.exit(0);
             }
             spinner.start("Connecting to Datadog API");
           }
@@ -123,7 +123,7 @@ export function registerAddIncidentioCommand(program: Command): void {
               `\nError: ${error instanceof Error ? error.message : String(error)}`,
             ),
           );
-          process.exit(1);
+          Deno.exit(1);
         }
       },
     );

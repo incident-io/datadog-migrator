@@ -14,20 +14,17 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Use Node.js 18.x
-      uses: actions/setup-node@v4
+    - name: Setup Deno
+      uses: denoland/setup-deno@v1
       with:
-        node-version: 18.x
-        cache: 'yarn'
-
-    - name: Install dependencies
-      run: yarn install --frozen-lockfile
-
-    - name: Install pkg globally
-      run: npm install -g pkg
+        deno-version: v1.42.x
 
     - name: Build binaries
-      run: yarn build:binary
+      run: |
+        deno task build:mac
+        deno task build:mac-arm
+        deno task build:linux
+        deno task build:windows
 
     - name: Upload binaries
       uses: actions/upload-artifact@v4

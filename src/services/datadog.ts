@@ -1,6 +1,6 @@
 import { client, v1 } from "@datadog/datadog-api-client";
-import { DatadogMonitor } from "@/types";
-import { debug } from "@/utils/config";
+import { DatadogMonitor } from "../types/index.ts";
+import { debug } from "../utils/config.ts";
 
 interface DatadogWebhook {
   name: string;
