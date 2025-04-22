@@ -1,4 +1,3 @@
-import { Command } from "commander";
 import kleur from "kleur";
 import ora from "ora";
 import inquirer from "inquirer";
@@ -9,42 +8,48 @@ import { debug, loadConfig } from "../utils/config.ts";
 import { MigrationType } from "../types/index.ts";
 import { prepareFilterOptions } from "../types/prepareFilterOptions.ts";
 import { displayMigrationResults } from "./remove-incidentio.ts";
+import Denomander from "https://deno.land/x/denomander@0.9.3/src/Denomander.ts";
 
-export function registerAddIncidentioCommand(program: Command): void {
+const identity = (i: string) => i;
+export function registerAddIncidentioCommand(program: Denomander): void {
   program
     .command("add-incidentio")
     .description("Add incident.io webhooks to monitors that use PagerDuty")
     .option(
-      "-k, --api-key <key>",
+      "-k, --api-key",
       "Datadog API key",
+      identity,
       Deno.env.get("DATADOG_API_KEY"),
     )
     .option(
-      "-a, --app-key <key>",
+      "-a, --app-key",
       "Datadog App key",
+      identity,
       Deno.env.get("DATADOG_APP_KEY"),
     )
-    .requiredOption("-c, --config <path>", "Path to config file")
+    .requiredOption("-c, --config", "Path to config file")
     .option("-d, --dry-run", "Dry run mode (no actual changes)")
-    .option("-s, --single-webhook", "Use a single webhook for all monitors")
     .option(
       "-v, --verbose",
       "Show detailed output including unchanged monitors",
+      identity,
       true,
     )
-    .option("-t, --tags <tags>", "Filter monitors by tags (comma-separated)")
-    .option("-n, --name <pattern>", "Filter monitors by name pattern")
-    .option("--message <pattern>", "Filter monitors by message pattern")
+    .option("-t, --tags", "Filter monitors by tags (comma-separated)")
+    .option("-n, --name", "Filter monitors by name pattern")
+    .option("--message", "Filter monitors by message pattern")
     .action(
       async (options: {
-        apiKey: string;
-        appKey: string;
+        "dry-run"?: boolean;
+        verbose: boolean;
+
+        "api-key": string;
+        "app-key": string;
         config: string;
-        dryRun?: boolean;
-        verbose?: boolean;
         tags?: string;
         name?: string;
         message?: string;
+        "show-monitors"?: boolean;
       }) => {
         try {
           // Load config if provided, otherwise prompt for credentials
@@ -52,14 +57,14 @@ export function registerAddIncidentioCommand(program: Command): void {
           const incidentioConfig = config.incidentioConfig;
           const mappings = config.mappings;
           const datadogService = new DatadogService({
-            apiKey: options.apiKey,
-            appKey: options.appKey,
+            apiKey: options["api-key"],
+            appKey: options["app-key"],
           });
 
           const spinner = ora("Connecting to Datadog API").start();
 
           // Confirm action if not in dry run mode
-          if (!options.dryRun) {
+          if (!options["dry-run"]) {
             spinner.stop();
             const webhookType = !incidentioConfig.webhookPerTeam
               ? "a single incident.io webhook (@webhook-incident-io)"
@@ -88,7 +93,7 @@ export function registerAddIncidentioCommand(program: Command): void {
           }
 
           // Create migration service with dryRun explicitly set
-          const dryRunMode = options.dryRun === true;
+          const dryRunMode = options["dry-run"] === true;
           debug(`Using dry run mode: ${dryRunMode ? "YES" : "NO"}`);
 
           const migrationService = new MigrationService(
@@ -100,7 +105,7 @@ export function registerAddIncidentioCommand(program: Command): void {
 
           // Perform migration
           spinner.start(
-            options.dryRun
+            options["dry-run"]
               ? "Simulating migration..."
               : "Migrating monitors...",
           );
@@ -117,6 +122,8 @@ export function registerAddIncidentioCommand(program: Command): void {
           });
 
           displayMigrationResults(spinner, "add", result, options);
+
+          Deno.exit(0);
         } catch (error) {
           console.error(
             kleur.red(

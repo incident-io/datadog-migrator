@@ -1,4 +1,3 @@
-import { Command } from "commander";
 import kleur from "kleur";
 import ora from "ora";
 import boxen from "boxen";
@@ -6,42 +5,46 @@ import boxen from "boxen";
 import { DatadogService } from "../services/datadog.ts";
 import { loadConfig } from "../utils/config.ts";
 import { DatadogMonitor, MigrationMapping } from "../types/index.ts";
+import Denomander from "https://deno.land/x/denomander@0.9.3/src/Denomander.ts";
 
-export function registerAnalyzeCommand(program: Command): void {
+const identity = (i: string) => i;
+export function registerAnalyzeCommand(program: Denomander): void {
   program
     .command("analyze")
     .description("Analyze Datadog monitors and validate configuration")
     .option(
-      "-k, --api-key <key>",
+      "-k, --api-key",
       "Datadog API key",
+      identity,
       Deno.env.get("DATADOG_API_KEY"),
     )
     .option(
-      "-a, --app-key <key>",
+      "-a, --app-key",
       "Datadog App key",
+      identity,
       Deno.env.get("DATADOG_APP_KEY"),
     )
-    .requiredOption("-c, --config <path>", "Path to config file")
-    .option("-t, --tags <tags>", "Filter monitors by tags (comma-separated)")
-    .option("-n, --name <pattern>", "Filter monitors by name pattern")
-    .option("-m, --message <pattern>", "Filter monitors by message pattern")
+    .requiredOption("-c, --config", "Path to config file")
+    .option("-t, --tags", "Filter monitors by tags (comma-separated)")
+    .option("-n, --name", "Filter monitors by name pattern")
+    .option("-m, --message", "Filter monitors by message pattern")
     .option("--show-monitors", "Show detailed list of monitors")
     .action(
       async (options: {
-        apiKey: string;
-        appKey: string;
+        'api-key': string;
+        'app-key': string;
         config: string;
         tags?: string;
         name?: string;
         message?: string;
-        showMonitors?: boolean;
+        'show-monitors'?: boolean;
       }) => {
         const config = loadConfig(options.config);
         const mappings = config.mappings;
         try {
           const datadogService = new DatadogService({
-            apiKey: options.apiKey,
-            appKey: options.appKey,
+            apiKey: options["api-key"],
+            appKey: options["app-key"],
           });
 
           const spinner = ora("Connecting to Datadog API").start();
@@ -75,9 +78,11 @@ export function registerAnalyzeCommand(program: Command): void {
           validateMappings(stats, mappings);
 
           // Show detailed monitor list if requested
-          if (options.showMonitors) {
+          if (options["show-monitors"]) {
             displayMonitorDetails(filteredMonitors);
           }
+
+          Deno.exit(0);
         } catch (error) {
           console.error(
             kleur.red(

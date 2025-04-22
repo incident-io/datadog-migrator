@@ -1,4 +1,4 @@
-import { Command } from "commander";
+import {confirm } from "https://deno.land/x/inquirer/mod.ts";
 import inquirer from "inquirer";
 import kleur from "kleur";
 import ora, { Ora } from "ora";
@@ -9,38 +9,44 @@ import { loadConfig } from "../utils/config.ts";
 import { formatMessageDiff } from "../utils/diff.ts";
 import { MigrationType } from "../types/index.ts";
 import { prepareFilterOptions } from "../types/prepareFilterOptions.ts";
+import Denomander from "https://deno.land/x/denomander@0.9.3/src/Denomander.ts";
 
-export function registerRemoveIncidentioCommand(program: Command): void {
+const identity = (i: string) => i;
+export function registerRemoveIncidentioCommand(program: Denomander): void {
   program
     .command("remove-incidentio")
     .description("Remove incident.io webhooks from monitors")
     .option(
-      "-k, --api-key <key>",
+      "-k, --api-key",
       "Datadog API key",
+      identity,
       Deno.env.get("DATADOG_API_KEY"),
     )
     .option(
-      "-a, --app-key <key>",
+      "-a, --app-key",
       "Datadog App key",
+      identity,
       Deno.env.get("DATADOG_APP_KEY"),
     )
-    .requiredOption("-c, --config <path>", "Path to config file")
+    .requiredOption("-c, --config", "Path to config file")
     .option("-d, --dry-run", "Dry run mode (no actual changes)")
     .option(
       "-v, --verbose",
       "Show detailed output including unchanged monitors",
+      identity,
       true,
     )
-    .option("-t, --tags <tags>", "Filter monitors by tags (comma-separated)")
-    .option("-n, --name <pattern>", "Filter monitors by name pattern")
-    .option("--message <pattern>", "Filter monitors by message pattern")
+    .option("-t, --tags", "Filter monitors by tags (comma-separated)")
+    .option("-n, --name", "Filter monitors by name pattern")
+    .option("--message", "Filter monitors by message pattern")
     .action(
       async (options: {
-        apiKey: string;
-        appKey: string;
+        "dry-run"?: boolean;
+        verbose: boolean;
+
+        "api-key": string;
+        "app-key": string;
         config: string;
-        dryRun?: boolean;
-        verbose?: boolean;
         tags?: string;
         name?: string;
         message?: string;
@@ -48,14 +54,14 @@ export function registerRemoveIncidentioCommand(program: Command): void {
         try {
           const config = loadConfig(options.config);
           const datadogService = new DatadogService({
-            apiKey: options.apiKey,
-            appKey: options.appKey,
+            apiKey: options["api-key"],
+            appKey: options["app-key"],
           });
 
           const spinner = ora("Connecting to Datadog API").start();
 
           // Confirm action
-          if (!options.dryRun) {
+          if (!options["dry-run"]) {
             const { confirmed } = await inquirer.prompt([
               {
                 type: "confirm",
@@ -77,12 +83,12 @@ export function registerRemoveIncidentioCommand(program: Command): void {
             datadogService,
             config.incidentioConfig,
             [],
-            { dryRun: options.dryRun },
+            { dryRun: options["dry-run"] },
           );
 
           // Perform migration
           spinner.start(
-            options.dryRun
+            options["dry-run"]
               ? "Simulating removal..."
               : "Removing incident.io webhooks...",
           );
@@ -92,12 +98,14 @@ export function registerRemoveIncidentioCommand(program: Command): void {
 
           const result = await migrationService.migrateMonitors({
             type: MigrationType.REMOVE_INCIDENTIO_WEBHOOK,
-            dryRun: options.dryRun,
+            dryRun: options["dry-run"],
             verbose: options.verbose,
             filter: filterOptions,
           });
 
           displayMigrationResults(spinner, "remove", result, options);
+
+          Deno.exit(0);
         } catch (error) {
           console.error(
             kleur.red(
@@ -115,11 +123,13 @@ export const displayMigrationResults = (
   type: "add" | "remove",
   result: MigrationResult,
   options: {
-    dryRun?: boolean;
+    "dry-run"?: boolean;
     verbose?: boolean;
   },
 ): void => {
-  spinner.succeed(options.dryRun ? "Simulation complete" : "Update complete");
+  spinner.succeed(
+    options["dry-run"] ? "Simulation complete" : "Update complete",
+  );
 
   // Show results
   console.log(kleur.bold("\nResults:"));
@@ -175,7 +185,7 @@ export const displayMigrationResults = (
     }
   }
 
-  if (options.dryRun) {
+  if (options["dry-run"]) {
     console.log(kleur.cyan("\nThis was a dry run. No changes were made."));
     console.log(kleur.cyan("Run again without --dry-run to apply changes."));
   }

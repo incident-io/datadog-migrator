@@ -1,5 +1,4 @@
-import fs from "node:fs";
-import path from "node:path"
+import * as path from "https://deno.land/std/path/mod.ts";
 import { MigrationConfig } from "../types/index.ts";
 
 // Global debug logging function
@@ -9,43 +8,34 @@ export function debug(message: string, ...args: unknown[]) {
   }
 }
 
-export function loadConfig(
-  filePath: string,
-  create: boolean = false,
-): MigrationConfig {
+export function loadConfig(filePath: string): MigrationConfig {
   try {
     const configPath = path.resolve(filePath);
 
     // Check if file exists
-    if (!fs.existsSync(configPath)) {
-      if (create) {
-        // Create a new config file with default values
-        const defaultConfig = createDefaultConfig();
-        fs.writeFileSync(configPath, JSON.stringify(defaultConfig, null, 2));
-        console.log(`Created new config file at ${configPath}`);
-        return defaultConfig;
-      } else {
+    try {
+      const fileInfo = Deno.statSync(configPath);
+      if (!fileInfo.isFile) {
+        throw new Error(`Path exists but is not a file: ${configPath}`);
+      }
+    } catch (err) {
+      // File doesn't exist
+      if (err instanceof Deno.errors.NotFound) {
         throw new Error(`Config file not found: ${configPath}`);
       }
+      throw err;
     }
 
-    const configContent = fs.readFileSync(configPath, "utf8");
+    const configContent = Deno.readTextFileSync(configPath);
     const config = JSON.parse(configContent) as MigrationConfig;
 
+    // Ensure we have default values for required fields
     if (!config.incidentioConfig) {
       config.incidentioConfig = {
         webhookPerTeam: false,
         webhookUrl: undefined,
         webhookToken: undefined,
       };
-
-      // Save the updated config back to the file
-      if (create) {
-        fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
-        console.log(
-          `Updated config file with default incident.io configuration`,
-        );
-      }
     }
 
     if (!config.mappings) {
