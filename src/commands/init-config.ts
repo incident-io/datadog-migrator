@@ -133,7 +133,10 @@ export function registerInitConfigCommand(program: Denomander): void {
           }
 
           // Get incident.io alert source details
-          const { webhookUrl, webhookToken } = await inquirer.prompt([
+          // Check if webhook token is in env
+          const envWebhookToken = Deno.env.get("INCIDENTIO_WEBHOOK_TOKEN");
+          
+          const promptQuestions: Parameters<typeof inquirer.prompt> = [
             {
               type: "input",
               name: "webhookUrl",
@@ -143,46 +146,70 @@ export function registerInitConfigCommand(program: Denomander): void {
                   ? true
                   : "Please enter a valid URL (should start with http or https)",
             },
-            {
+          ];
+          
+          // Only prompt for webhook token if not in environment variable
+          if (!envWebhookToken) {
+            promptQuestions.push({
               type: "input",
               name: "webhookToken",
-              message: "Enter the incident.io alert source secret token:",
+              message: "Enter the incident.io alert source secret token (or ctrl+c to quit and set it in your .env as INCIDENTIO_WEBHOOK_TOKEN):",
               validate: (input) =>
                 input
                   ? true
                   : "Please enter the secret token from your incident.io alert source",
-            },
-          ]);
+            });
+          }
+
+          // This is fine, it just doesn't like the generic
+          // deno-lint-ignore ban-ts-comment
+          // @ts-expect-error
+          const answers = await inquirer.prompt(promptQuestions);
+          const webhookUrl = answers.webhookUrl;
+          const webhookToken = envWebhookToken || answers.webhookToken;
+          
+          if (!webhookToken && !envWebhookToken) {
+            console.log(
+              kleur.yellow(
+                "\nNo webhook token provided. You can add it to your .env file as INCIDENTIO_WEBHOOK_TOKEN to avoid being prompted for it in the future."
+              )
+            );
+            Deno.exit(1);
+          }
 
           defaultConfig.incidentioConfig.webhookUrl = webhookUrl;
 
           // Clean up token input - handle various formats users might paste
-          let cleanToken = webhookToken.trim();
+          if (!envWebhookToken) {
+            // Only process and store token in config if it doesn't come from env
+            let cleanToken = webhookToken.trim();
 
-          // Handle if they pasted a full header JSON object
-          if (
-            cleanToken.startsWith("{") &&
-            cleanToken.includes("Authorization")
-          ) {
-            try {
-              const headerObj = JSON.parse(cleanToken);
-              if (
-                headerObj.Authorization &&
-                typeof headerObj.Authorization === "string"
-              ) {
-                cleanToken = headerObj.Authorization;
+            // Handle if they pasted a full header JSON object
+            if (
+              cleanToken.startsWith("{") &&
+              cleanToken.includes("Authorization")
+            ) {
+              try {
+                const headerObj = JSON.parse(cleanToken);
+                if (
+                  headerObj.Authorization &&
+                  typeof headerObj.Authorization === "string"
+                ) {
+                  cleanToken = headerObj.Authorization;
+                }
+              } catch {
+                // Not valid JSON, continue with other processing
               }
-            } catch {
-              // Not valid JSON, continue with other processing
             }
-          }
 
-          // Handle "Bearer token" format
-          if (cleanToken.startsWith("Bearer ")) {
-            cleanToken = cleanToken.substring(7).trim();
-          }
+            // Handle "Bearer token" format
+            if (cleanToken.startsWith("Bearer ")) {
+              cleanToken = cleanToken.substring(7).trim();
+            }
 
-          defaultConfig.incidentioConfig.webhookToken = cleanToken;
+            // Only store in config if not provided by environment
+            defaultConfig.incidentioConfig.webhookToken = cleanToken;
+          }
 
           console.log(
             kleur.blue(

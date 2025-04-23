@@ -2,6 +2,7 @@
   "version": "3",
   "packages": {
     "specifiers": {
+      "jsr:@std/dotenv@^0.225.3": "jsr:@std/dotenv@0.225.3",
       "npm:@datadog/datadog-api-client@1.34.1": "npm:@datadog/datadog-api-client@1.34.1",
       "npm:boxen@8.0.1": "npm:boxen@8.0.1",
       "npm:commander@13.1.0": "npm:commander@13.1.0",
@@ -10,6 +11,11 @@
       "npm:inquirer@12.5.2": "npm:inquirer@12.5.2",
       "npm:kleur@4.1.5": "npm:kleur@4.1.5",
       "npm:ora@8.2.0": "npm:ora@8.2.0"
+    },
+    "jsr": {
+      "@std/dotenv@0.225.3": {
+        "integrity": "a95e5b812c27b0854c52acbae215856d9cce9d4bbf774d938c51d212711e8d4a"
+      }
     },
     "npm": {
       "@datadog/datadog-api-client@1.34.1": {
@@ -618,7 +624,7 @@
     }
   },
   "redirects": {
-    "https://deno.land/std/dotenv/mod.ts": "https://deno.land/std@0.224.0/dotenv/mod.ts",
+    "https://deno.land/std/dotenv/mod.ts": "https://deno.land/std@0.225.3/dotenv/mod.ts",
     "https://deno.land/std/fs/mod.ts": "https://deno.land/std@0.224.0/fs/mod.ts",
     "https://deno.land/std/path/mod.ts": "https://deno.land/std@0.224.0/path/mod.ts",
     "https://deno.land/x/denomander/mod.ts": "https://deno.land/x/denomander@0.9.3/mod.ts",
@@ -644,9 +650,6 @@
     "https://deno.land/std@0.138.0/testing/asserts.ts": "dc7ab67b635063989b4aec8620dbcc6fa7c2465f2d9c856bddf8c0e7b45b4481",
     "https://deno.land/std@0.224.0/assert/assert.ts": "09d30564c09de846855b7b071e62b5974b001bb72a4b797958fe0660e7849834",
     "https://deno.land/std@0.224.0/assert/assertion_error.ts": "ba8752bd27ebc51f723702fac2f54d3e94447598f54264a6653d6413738a8917",
-    "https://deno.land/std@0.224.0/dotenv/mod.ts": "0180eaeedaaf88647318811cdaa418cc64dc51fb08354f91f5f480d0a1309f7d",
-    "https://deno.land/std@0.224.0/dotenv/parse.ts": "09977ff88dfd1f24f9973a338f0f91bbdb9307eb5ff6085446e7c423e4c7ba0c",
-    "https://deno.land/std@0.224.0/dotenv/stringify.ts": "275da322c409170160440836342eaa7cf012a1d11a7e700d8ca4e7f2f8aa4615",
     "https://deno.land/std@0.224.0/fs/_create_walk_entry.ts": "5d9d2aaec05bcf09a06748b1684224d33eba7a4de24cf4cf5599991ca6b5b412",
     "https://deno.land/std@0.224.0/fs/_get_file_info_type.ts": "da7bec18a7661dba360a1db475b826b18977582ce6fc9b25f3d4ee0403fe8cbd",
     "https://deno.land/std@0.224.0/fs/_is_same_path.ts": "709c95868345fea051c58b9e96af95cff94e6ae98dfcff2b66dee0c212c4221f",
@@ -783,6 +786,7 @@
   },
   "workspace": {
     "dependencies": [
+      "jsr:@std/dotenv@^0.225.3",
       "npm:@datadog/datadog-api-client@1.34.1",
       "npm:axios@1.8.4",
       "npm:boxen@8.0.1",
@@ -793,36 +797,6 @@
       "npm:inquirer@12.5.2",
       "npm:kleur@4.1.5",
       "npm:ora@8.2.0"
-    ],
-    "packageJson": {
-      "dependencies": [
-        "npm:@datadog/datadog-api-client@^1.34.1",
-        "npm:@eslint/js@^9.25.0",
-        "npm:@types/figlet@^1.7.0",
-        "npm:@types/inquirer@^9.0.7",
-        "npm:@types/jest@^29.5.14",
-        "npm:@types/node@^22.14.1",
-        "npm:@typescript-eslint/eslint-plugin@^8.30.1",
-        "npm:@typescript-eslint/parser@^8.30.1",
-        "npm:axios@^1.8.4",
-        "npm:boxen@^8.0.1",
-        "npm:chalk@^5.4.1",
-        "npm:commander@^13.1.0",
-        "npm:dotenv@^16.5.0",
-        "npm:eslint@^9.25.0",
-        "npm:figlet@^1.8.1",
-        "npm:inquirer@^12.5.2",
-        "npm:jest@^29.7.0",
-        "npm:kleur@^4.1.5",
-        "npm:ora@^8.2.0",
-        "npm:pkg@^5.8.1",
-        "npm:prettier@^3.5.3",
-        "npm:ts-jest@^29.3.2",
-        "npm:tsup@^8.4.0",
-        "npm:tsx@^4.19.3",
-        "npm:typescript-eslint@^8.30.1",
-        "npm:typescript@^5.8.3"
-      ]
-    }
+    ]
   }
 }

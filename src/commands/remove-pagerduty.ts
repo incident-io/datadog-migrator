@@ -60,22 +60,30 @@ export function registerRemovePagerdutyCommand(program: Denomander): void {
             appKey: options["app-key"],
           });
 
-          // Confirm action
+          // Confirm action with stronger verification
           if (!options["dry-run"]) {
-            const { confirmed } = await inquirer.prompt([
+            console.log(kleur.yellow("\n⚠️  WARNING: This is a destructive operation ⚠️"));
+            console.log(kleur.yellow("This will remove all PagerDuty service mentions from your monitors."));
+            console.log(kleur.yellow("This action cannot be automatically undone.\n"));
+            
+            const { confirmText } = await inquirer.prompt([
               {
-                type: "confirm",
-                name: "confirmed",
-                message:
-                  "This will remove all PagerDuty service mentions from monitors. Continue?",
-                default: false,
+                type: "input",
+                name: "confirmText",
+                message: "Type CONFIRM to proceed:",
+                validate: (input: string) =>
+                  input === "CONFIRM" ? 
+                    true : 
+                    "You must type CONFIRM (all uppercase) to continue"
               },
             ]);
 
-            if (!confirmed) {
+            if (confirmText !== "CONFIRM") {
               console.log(kleur.yellow("Operation cancelled."));
               Deno.exit(0);
             }
+            
+            console.log(kleur.green("Confirmation received. Proceeding with PagerDuty removal..."));
           }
 
           // Create migration service

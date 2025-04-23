@@ -19,7 +19,8 @@
     "inquirer": "npm:inquirer@12.5.2",
     "ora": "npm:ora@8.2.0",
     "axios": "npm:axios@1.8.4",
-    "@datadog/datadog-api-client": "npm:@datadog/datadog-api-client@1.34.1"
+    "@datadog/datadog-api-client": "npm:@datadog/datadog-api-client@1.34.1",
+    "@std/dotenv": "jsr:@std/dotenv@^0.225.3"
   },
   "compilerOptions": {
     "lib": ["deno.window"],

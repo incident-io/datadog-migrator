@@ -8,6 +8,7 @@ import {
   MigrationType,
 } from "../types/index.ts";
 import { debug } from "../utils/config.ts";
+import kleur from "kleur";
 
 export type MigrationChange = {
   id: number;
@@ -400,6 +401,15 @@ export class MigrationService {
         debug(
           `Missing webhook URL or token, cannot create webhook ${datadogWebhookName}`,
         );
+        if (!this.incidentioConfig.webhookToken) {
+          console.log(
+            kleur.yellow(
+              `\nMissing incident.io webhook token. You can either:
+- Add it to your config file under incidentioConfig.webhookToken, or
+- Set it in your .env file as INCIDENTIO_WEBHOOK_TOKEN to avoid storing it in your config`
+            )
+          );
+        }
         return false;
       }
 

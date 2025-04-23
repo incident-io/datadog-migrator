@@ -38,6 +38,12 @@ export function loadConfig(filePath: string): MigrationConfig {
       };
     }
 
+    // Check for webhook token in environment and use it if provided
+    const envWebhookToken = Deno.env.get("INCIDENTIO_WEBHOOK_TOKEN");
+    if (envWebhookToken) {
+      config.incidentioConfig.webhookToken = envWebhookToken;
+    }
+
     if (!config.mappings) {
       config.mappings = [];
     }

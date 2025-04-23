@@ -1,8 +1,8 @@
 #!/usr/bin/env -S deno run --allow-read --allow-env --allow-net --allow-write
 
 import Denomander from "https://deno.land/x/denomander/mod.ts";
-import { load } from "https://deno.land/std/dotenv/mod.ts";
 
+import "@std/dotenv/load";
 import { displayBanner } from "./utils/banner.ts";
 import { registerAddIncidentioCommand } from "./commands/add-incidentio.ts";
 import { registerRemoveIncidentioCommand } from "./commands/remove-incidentio.ts";
@@ -10,8 +10,6 @@ import { registerRemovePagerdutyCommand } from "./commands/remove-pagerduty.ts";
 import { registerInitConfigCommand } from "./commands/init-config.ts";
 import { registerAnalyzeCommand } from "./commands/analyze.ts";
 
-// Load environment variables from .env file
-await load({ export: true });
 
 // Display banner
 displayBanner();
@@ -42,3 +40,4 @@ try {
 if (Deno.args.length === 0) {
   program.showHelp();
 }
+
