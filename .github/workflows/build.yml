@@ -1,0 +1,93 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*' # Run when tag matches v*, e.g., v1.0.0, v2.1.3
+  workflow_dispatch:
+    # Allow manual triggering
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Deno
+      uses: denoland/setup-deno@v1
+      with:
+        deno-version: v1.42.x
+
+    - name: Build binaries
+      run: |
+        deno task build:mac
+        deno task build:mac-arm
+        deno task build:linux
+        deno task build:windows
+
+    - name: Upload binaries
+      uses: actions/upload-artifact@v4
+      with:
+        name: binaries
+        path: dist/datadog-migrator-*
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 # Fetch all history for changelog generation
+    
+    - name: Get version from tag
+      id: get_version
+      run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
+      
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: binaries
+    
+    - name: Copy binaries to release directory
+      run: |
+        mkdir -p release
+        cp binaries/binaries/datadog-migrator-* release/
+        cd release
+        sha256sum * > SHA256SUMS.txt
+      shell: bash
+    
+    - name: Generate changelog
+      id: changelog
+      run: |
+        # Get tag message
+        TAG_MESSAGE=$(git tag -l --format='%(contents)' ${GITHUB_REF#refs/tags/})
+        echo "TAG_MESSAGE<<EOF" >> $GITHUB_ENV
+        echo "$TAG_MESSAGE" >> $GITHUB_ENV
+        echo "EOF" >> $GITHUB_ENV
+
+    - name: Create Release
+      id: create_release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: release/*
+        name: Datadog Migrator v${{ env.VERSION }}
+        body: |
+          # Datadog Migrator v${{ env.VERSION }}
+          
+          ## Release Notes
+          ${{ env.TAG_MESSAGE || 'Initial release' }}
+          
+          ## Assets
+          
+          Download the appropriate binary for your system:
+          - **macOS Intel**: `datadog-migrator-macos-x64-${{ env.VERSION }}`
+          - **macOS Apple Silicon**: `datadog-migrator-macos-arm64-${{ env.VERSION }}`
+          - **Linux**: `datadog-migrator-linux-x64-${{ env.VERSION }}`
+          - **Windows**: `datadog-migrator-windows-x64-${{ env.VERSION }}.exe`
+          
+          Verify checksums with `SHA256SUMS.txt`.
+        draft: false
+        prerelease: false
