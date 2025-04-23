@@ -18,7 +18,6 @@ displayBanner();
 const program = new Denomander({
   app_name: "datadog-migrator",
   app_description: "CLI tool to migrate Datadog monitors between PagerDuty and incident.io",
-  app_version: "1.0.0",
 });
 
 // Register commands
