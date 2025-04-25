@@ -27,6 +27,10 @@ registerAddIncidentioCommand(program);
 registerRemoveIncidentioCommand(program);
 registerRemovePagerdutyCommand(program);
 
+Deno.addSignalListener("SIGINT", () => {
+  Deno.exit();
+});
+
 // Parse Deno args
 try {
   program.parse(Deno.args);

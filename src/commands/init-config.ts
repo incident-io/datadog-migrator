@@ -78,7 +78,7 @@ export function registerInitConfigCommand(program: Denomander): void {
                   name: "Team-specific webhooks based on mappings",
                   value: "team",
                   description:
-                    "Create multiple webhooks in Datadog (one per team) that you tag with @webhook-incident-io-myteam. Each webhook configuration will include both 'tags': $TAGS and a hardcoded 'team': 'my-team' in the payload.",
+                    "Create multiple webhooks in Datadog (one per team) that you tag with @webhook-incident-io-myteam.",
                 },
               ],
             },
