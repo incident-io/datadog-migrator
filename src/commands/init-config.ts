@@ -53,7 +53,7 @@ export function registerInitConfigCommand(program: Denomander): void {
                 return;
               }
             }
-          } catch (err) {
+          } catch {
             // File doesn't exist, continue
           }
 
