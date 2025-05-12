@@ -6,6 +6,7 @@ import ora from "ora";
 import { createDefaultConfig } from "../utils/config.ts";
 import { DatadogService } from "../services/datadog.ts";
 import { MigrationMapping } from "../types/index.ts";
+import { PAGERDUTY_SERVICE_REGEX } from "../utils/regex.ts";
 import Denomander from "https://deno.land/x/denomander@0.9.3/src/Denomander.ts";
 
 const identity = (i: string) => i;
@@ -251,11 +252,10 @@ export function registerInitConfigCommand(program: Denomander): void {
               const monitors = await datadogService.getMonitors();
 
               // Extract all PagerDuty services
-              const pdPattern = /@pagerduty-(\S+)/g;
               const services = new Set<string>();
 
               for (const monitor of monitors) {
-                const matches = [...monitor.message.matchAll(pdPattern)];
+                const matches = [...monitor.message.matchAll(PAGERDUTY_SERVICE_REGEX)];
                 for (const match of matches) {
                   services.add(match[1]);
                 }
