@@ -9,6 +9,7 @@ A CLI tool to help migrate Datadog monitors over from PagerDuty to incident.io.
 - Remove PagerDuty service mentions from monitors
 - Support for team-specific webhook mapping
 - Add team tags to monitors based on PagerDuty service mappings
+- Support for additional metadata in webhook payloads
 - Automatic webhook creation in Datadog
 - Configuration via command line, interactive prompts, or config file
 - Dry run mode to preview changes without modifying monitors
@@ -171,11 +172,27 @@ You can configure the tool using a JSON configuration file. The tool will create
   "mappings": [
     {
       "pagerdutyService": "database-service",
-      "incidentioTeam": "platform"
+      "incidentioTeam": "platform",
+      "additionalMetadata": {
+        "priority": "high",
+        "service": "database"
+      }
     },
     {
-      "pagerdutyService": "api-service",
-      "incidentioTeam": "api"
+      "pagerdutyService": "api-service-critical",
+      "incidentioTeam": "api",
+      "additionalMetadata": {
+        "priority": "high",
+        "service": "api"
+      }
+    },
+    {
+      "pagerdutyService": "api-service-non-critical",
+      "incidentioTeam": "api",
+      "additionalMetadata": {
+        "priority": "low",
+        "service": "api"
+      }
     }
   ]
 }
@@ -189,6 +206,19 @@ You can configure the tool using a JSON configuration file. The tool will create
 - `addTeamTags`: (Optional) Whether to add team tags to monitors when using single webhook mode
 - `teamTagPrefix`: (Optional) The prefix to use for team tags (default: "team")
 - `mappings`: An array of mappings from PagerDuty service names to incident.io team names
+  - `pagerdutyService`: The PagerDuty service name
+  - `incidentioTeam`: The incident.io team name to route alerts to
+  - `additionalMetadata`: (Optional) Additional metadata fields to include in webhook payloads or as tags
+
+### Additional Metadata
+
+The `additionalMetadata` field allows you to include extra metadata in your incident.io alerts. This is useful for:
+
+1. Adding priority information to distinguish between critical and non-critical alerts
+2. Adding service information when multiple PagerDuty services map to the same team
+3. Including environment details or other contextual information
+
+When using team-specific webhooks, this metadata is included directly in the webhook payload. When using a single webhook with team tags, these values are also added as tags to the monitor in the format `key:value`.
 
 ## Environment Variables
 

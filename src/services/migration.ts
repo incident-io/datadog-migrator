@@ -118,6 +118,10 @@ export class MigrationService {
     );
     return mapping?.incidentioTeam ?? undefined;
   }
+  
+  private getMappingForService(service: string): MigrationMapping {
+    return this.mappings.find((m) => m.pagerdutyService === service) || { pagerdutyService: service };
+  }
 
   /**
    * Create a team tag based on the config prefix and team name
@@ -363,6 +367,7 @@ export class MigrationService {
   private async ensureWebhookExists(
     webhookName: string,
     team?: string,
+    additionalMetadata?: Record<string, string>,
   ): Promise<boolean> {
     if (this.dryRun) {
       debug(`Dry run: Skipping webhook creation for ${webhookName}`);
@@ -444,6 +449,14 @@ export class MigrationService {
       "team": "${team}"`;
       }
 
+      // Add additional metadata fields if provided
+      if (additionalMetadata) {
+        for (const [key, value] of Object.entries(additionalMetadata)) {
+          payload += `,
+      "${key}": "${value}"`;
+        }
+      }
+
       // Close the JSON
       payload += `
   }
@@ -517,6 +530,8 @@ export class MigrationService {
 
           // Create the webhook if needed
           if (!dryRun) {
+            // For single webhook strategy, we don't include metadata in the webhook itself
+            // Instead, we'll add metadata as tags to the monitors
             const webhookExists = await this.ensureWebhookExists(webhookName);
             if (!webhookExists) {
               return {
@@ -529,10 +544,13 @@ export class MigrationService {
             }
           }
 
-          // Check if we need to add team tags when using single webhook
+          // Check if we need to add team tags or metadata tags when using single webhook
           if (
-            this.incidentioConfig.addTeamTags &&
-            !this.incidentioConfig.webhookPerTeam
+            (!this.incidentioConfig.webhookPerTeam) && 
+            (this.incidentioConfig.addTeamTags || pagerDutyServices.some(service => {
+              const mapping = this.getMappingForService(service);
+              return mapping.additionalMetadata && Object.keys(mapping.additionalMetadata).length > 0;
+            }))
           ) {
             let tagsUpdated = false;
             tagsBefore = [...monitor.tags]; // Store original tags
@@ -540,13 +558,28 @@ export class MigrationService {
 
             // Add team tags for each service in the monitor
             for (const service of pagerDutyServices) {
-              const team = this.getTeamForPagerDutyService(service);
-              if (team) {
+              const mapping = this.getMappingForService(service);
+              const team = mapping.incidentioTeam;
+              
+              // Add team tags if enabled
+              if (this.incidentioConfig.addTeamTags && team) {
                 const teamTag = this.createTeamTag(team);
                 if (!monitorTags.includes(teamTag)) {
                   monitorTags.push(teamTag);
                   tagsUpdated = true;
                   debug(`Adding tag ${teamTag} to monitor ${monitor.id}`);
+                }
+              }
+              
+              // Always add additional metadata as tags if present
+              if (mapping.additionalMetadata) {
+                for (const [key, value] of Object.entries(mapping.additionalMetadata)) {
+                  const metadataTag = `${key}:${value}`;
+                  if (!monitorTags.includes(metadataTag)) {
+                    monitorTags.push(metadataTag);
+                    tagsUpdated = true;
+                    debug(`Adding metadata tag ${metadataTag} to monitor ${monitor.id}`);
+                  }
                 }
               }
             }
@@ -595,7 +628,8 @@ export class MigrationService {
           // Calculate expected webhooks based on mappings
           const expectedWebhooks = new Set<string>();
           for (const service of pagerDutyServices) {
-            const team = this.getTeamForPagerDutyService(service);
+            const mapping = this.mappings.find(m => m.pagerdutyService === service);
+            const team = mapping?.incidentioTeam;
             const webhookName = this.getWebhookNameForTeam(team);
 
             // Create team-specific webhook if needed
@@ -603,6 +637,7 @@ export class MigrationService {
               const webhookCreated = await this.ensureWebhookExists(
                 webhookName,
                 team,
+                mapping?.additionalMetadata // Pass the additional metadata
               );
               if (!webhookCreated) {
                 return {

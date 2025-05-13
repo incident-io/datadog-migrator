@@ -10,6 +10,7 @@ export interface MigrationMapping {
   pagerdutyService?: string;
   incidentioTeam?: string | null;
   webhookName?: string;
+  additionalMetadata?: Record<string, string>; // Additional metadata for incident.io webhooks
 }
 
 export interface MigrationConfig {
