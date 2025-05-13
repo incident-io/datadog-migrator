@@ -1,4 +1,3 @@
-import {confirm } from "https://deno.land/x/inquirer/mod.ts";
 import inquirer from "inquirer";
 import kleur from "kleur";
 import ora, { Ora } from "ora";

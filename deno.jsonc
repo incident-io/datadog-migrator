@@ -7,7 +7,8 @@
     "build:mac": "deno compile --allow-read --allow-write --allow-net --allow-env --target x86_64-apple-darwin --output dist/datadog-migrator-macos-x64 src/index.ts",
     "build:mac-arm": "deno compile --allow-read --allow-write --allow-net --allow-env --target aarch64-apple-darwin --output dist/datadog-migrator-macos-arm64 src/index.ts",
     "build:linux": "deno compile --allow-read --allow-write --allow-net --allow-env --target x86_64-unknown-linux-gnu --output dist/datadog-migrator-linux-x64 src/index.ts",
-    "build:windows": "deno compile --allow-read --allow-write --allow-net --allow-env --target x86_64-pc-windows-msvc --output dist/datadog-migrator-win-x64.exe src/index.ts"
+    "build:windows": "deno compile --allow-read --allow-write --allow-net --allow-env --target x86_64-pc-windows-msvc --output dist/datadog-migrator-win-x64.exe src/index.ts",
+    "lint": "deno lint --ignore=dist/,node_modules/"
   },
   "imports": {
     "commander": "npm:commander@13.1.0",
@@ -21,6 +22,12 @@
     "axios": "npm:axios@1.8.4",
     "@datadog/datadog-api-client": "npm:@datadog/datadog-api-client@1.34.1",
     "@std/dotenv": "jsr:@std/dotenv@^0.225.3"
+  },
+  "lint": {
+    "rules": {
+      "exclude": ["no-case-declarations"]
+    },
+    "exclude": ["dist/", "node_modules/"]
   },
   "compilerOptions": {
     "lib": ["deno.window"],

@@ -8,6 +8,7 @@ import {
   MigrationType,
 } from "../types/index.ts";
 import { debug } from "../utils/config.ts";
+import { PAGERDUTY_SERVICE_REGEX } from "../utils/regex.ts";
 import kleur from "kleur";
 
 export type MigrationChange = {
@@ -55,10 +56,6 @@ export class MigrationService {
     this.dryRun = options.dryRun || false;
   }
 
-  private getPagerDutyPattern(): RegExp {
-    // Match @pagerduty-ServiceName
-    return /@pagerduty-(\S+)/g;
-  }
 
   private getIncidentioWebhookPattern(): RegExp {
     // Match @webhook-incident-io or @webhook-incident-io-team-name with variations
@@ -66,7 +63,7 @@ export class MigrationService {
   }
 
   private findPagerDutyServices(message: string): string[] {
-    const matches = message.match(this.getPagerDutyPattern());
+    const matches = message.match(PAGERDUTY_SERVICE_REGEX);
     if (!matches) return [];
 
     return matches.map((match) => {
@@ -174,11 +171,10 @@ export class MigrationService {
     monitors: DatadogMonitor[],
   ): MigrationValidation {
     const servicesInMonitors = new Set<string>();
-    const pdPattern = this.getPagerDutyPattern();
 
     // Find all unique PagerDuty services in monitors
     for (const monitor of monitors) {
-      const pdMatches = monitor.message.match(pdPattern);
+      const pdMatches = monitor.message.match(PAGERDUTY_SERVICE_REGEX);
 
       if (pdMatches) {
         for (const match of pdMatches) {
@@ -700,9 +696,8 @@ export class MigrationService {
           };
         }
 
-        const pdPattern = this.getPagerDutyPattern();
         newMessage = newMessage
-          .replace(pdPattern, "")
+          .replace(PAGERDUTY_SERVICE_REGEX, "")
           .replace(/\s+/g, " ")
           .trim();
         updated = true;

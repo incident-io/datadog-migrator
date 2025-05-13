@@ -5,6 +5,7 @@ import boxen from "boxen";
 import { DatadogService } from "../services/datadog.ts";
 import { loadConfig } from "../utils/config.ts";
 import { DatadogMonitor, MigrationMapping } from "../types/index.ts";
+import { PAGERDUTY_SERVICE_REGEX } from "../utils/regex.ts";
 import Denomander from "https://deno.land/x/denomander@0.9.3/src/Denomander.ts";
 
 const identity = (i: string) => i;
@@ -167,9 +168,6 @@ function analyzeMonitors(monitors: DatadogMonitor[]): MonitorStats {
     neither: 0,
   };
 
-  // PagerDuty service pattern
-  const pdPattern = /@pagerduty-(\S+)/g;
-
   // Incident.io webhook pattern
   const incidentPattern = /@webhook-incident-io(-\S+)?/g;
 
@@ -177,7 +175,7 @@ function analyzeMonitors(monitors: DatadogMonitor[]): MonitorStats {
     const { message } = monitor;
 
     // Check for PagerDuty mentions
-    const pdMatches = [...message.matchAll(pdPattern)];
+    const pdMatches = [...message.matchAll(PAGERDUTY_SERVICE_REGEX)];
     const hasPagerDuty = pdMatches.length > 0;
 
     if (hasPagerDuty) {
@@ -385,28 +383,28 @@ function displayMonitorDetails(monitors: DatadogMonitor[]): void {
   // Group monitors by their notification configuration
   const pdOnly = monitors.filter((monitor) => {
     return (
-      monitor.message.match(/@pagerduty-(\S+)/g) &&
+      monitor.message.match(PAGERDUTY_SERVICE_REGEX) &&
       !monitor.message.match(/@webhook-incident-io(-\S+)?/g)
     );
   });
 
   const incidentOnly = monitors.filter((monitor) => {
     return (
-      !monitor.message.match(/@pagerduty-(\S+)/g) &&
+      !monitor.message.match(PAGERDUTY_SERVICE_REGEX) &&
       monitor.message.match(/@webhook-incident-io(-\S+)?/g)
     );
   });
 
   const both = monitors.filter((monitor) => {
     return (
-      monitor.message.match(/@pagerduty-(\S+)/g) &&
+      monitor.message.match(PAGERDUTY_SERVICE_REGEX) &&
       monitor.message.match(/@webhook-incident-io(-\S+)?/g)
     );
   });
 
   const neither = monitors.filter((monitor) => {
     return (
-      !monitor.message.match(/@pagerduty-(\S+)/g) &&
+      !monitor.message.match(PAGERDUTY_SERVICE_REGEX) &&
       !monitor.message.match(/@webhook-incident-io(-\S+)?/g)
     );
   });
@@ -456,7 +454,7 @@ function extractMentions(message: string): string {
 
   // Highlight PagerDuty mentions
   result = result.replace(
-    /@pagerduty-(\S+)/g,
+    PAGERDUTY_SERVICE_REGEX,
     (match) => `${kleur.blue(match)}`,
   );
 
