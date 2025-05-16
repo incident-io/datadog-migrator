@@ -9,7 +9,8 @@ import { MigrationMapping } from "../types/index.ts";
 import { getServiceRegexForProvider } from "../utils/regex.ts";
 import Denomander from "https://deno.land/x/denomander@0.9.3/src/Denomander.ts";
 
-const identity = (i: string) => i;
+const identity: (x: string) => string = (i: string) => i;
+
 export function registerInitConfigCommand(program: Denomander): void {
   program
     .command("init")
@@ -322,9 +323,8 @@ export function registerInitConfigCommand(program: Denomander): void {
                           incidentioTeam: null, // Placeholder for user to fill in
                           additionalMetadata: {
                             // Example metadata - useful for differentiating similar services
-                            "priority": "high",
-                            "environment": "production"
-                          }
+                            "service": service,
+                          },
                         });
                       } else {
                         defaultConfig.mappings.push({
@@ -340,9 +340,8 @@ export function registerInitConfigCommand(program: Denomander): void {
                           incidentioTeam: null, // Placeholder for user to fill in
                           additionalMetadata: {
                             // Example metadata - useful for differentiating similar services
-                            "priority": "high",
-                            "environment": "production"
-                          }
+                            "service": service,
+                          },
                         });
                       } else {
                         defaultConfig.mappings.push({
@@ -373,7 +372,7 @@ export function registerInitConfigCommand(program: Denomander): void {
                       "\nPlease edit the file to fill and set the relevant incident-io teams before running the 'add-incidentio' command.",
                     ),
                   );
-                  
+
                   // Add advice about additionalMetadata
                   console.log(
                     kleur.cyan(

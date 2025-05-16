@@ -6,6 +6,7 @@ import { MigrationService } from "../../services/migration.ts";
 import type { DatadogService } from "../../services/datadog.ts";
 import { MigrationType } from "../../types/index.ts";
 import { MockDatadogService } from "../utils/mock-datadog-service.ts";
+import type { DatadogWebhook } from "../utils/mock-datadog-service.ts";
 import { createPagerDutyMonitor, createTestConfig, createTestMappings } from "../utils/test-utils.ts";
 import { withMockedEnv } from "../utils/test-stub.ts";
 
@@ -19,10 +20,10 @@ Deno.test("add-incidentio command - single webhook mode with additionalMetadata"
   await withMockedEnv(async () => {
     // Create and configure mock service
     const mockDatadogService = new MockDatadogService();
-    mockDatadogService.setMonitors([
+    mockDatadogService.monitors = [
       createPagerDutyMonitor("api-critical", { id: 1, tags: ["env:prod"] }),
       createPagerDutyMonitor("database", { id: 2, tags: ["env:prod"] })
-    ]);
+    ];
     
     // Create test config directly in memory
     const config = {
@@ -56,18 +57,18 @@ Deno.test("add-incidentio command - single webhook mode with additionalMetadata"
     assertEquals(result.processed, 2, "Should process both monitors");
     
     // Verify that updateMonitor was called twice
-    assertEquals(mockDatadogService.apiCalls.updateMonitor.length, 2, "Should call updateMonitor twice");
+    assertEquals(mockDatadogService.updateCalls.length, 2, "Should call updateMonitor twice");
     
     // Verify that only one webhook was created
-    assertEquals(mockDatadogService.apiCalls.createWebhook.length, 1, "Should create only one webhook");
+    assertEquals(mockDatadogService.webhookCalls.length, 1, "Should create only one webhook");
     assertEquals(
-      mockDatadogService.apiCalls.createWebhook[0].name, 
+      mockDatadogService.webhookCalls[0].name, 
       "incident-io", 
       "Should create the default webhook"
     );
     
     // Check that all monitors got the same webhook
-    for (const update of mockDatadogService.apiCalls.updateMonitor) {
+    for (const update of mockDatadogService.updateCalls) {
       assertStringIncludes(
         update.data.message || "", 
         "@webhook-incident-io", 
@@ -76,8 +77,9 @@ Deno.test("add-incidentio command - single webhook mode with additionalMetadata"
     }
     
     // Check that the monitor for api-critical was updated with correct tags
-    const apiUpdate = mockDatadogService.apiCalls.updateMonitor
-      .find(update => update.data.message?.includes("api-critical"));
+    const apiUpdate = mockDatadogService.updateCalls
+      .find((update: { id: number; data: Partial<{ message: string }> }) => 
+        update.data.message?.includes("api-critical"));
     
     if (!apiUpdate) {
       throw new Error("Could not find update for api-critical monitor");
@@ -89,8 +91,9 @@ Deno.test("add-incidentio command - single webhook mode with additionalMetadata"
     assertEquals(apiTags.includes("team:api-team"), true, "Should add team:api-team tag");
     
     // Check that the monitor for database was updated with correct tags
-    const dbUpdate = mockDatadogService.apiCalls.updateMonitor
-      .find(update => update.data.message?.includes("database"));
+    const dbUpdate = mockDatadogService.updateCalls
+      .find((update: { id: number; data: Partial<{ message: string }> }) => 
+        update.data.message?.includes("database"));
     
     if (!dbUpdate) {
       throw new Error("Could not find update for database monitor");
@@ -114,11 +117,11 @@ Deno.test("add-incidentio command - team webhook mode with additionalMetadata", 
   await withMockedEnv(async () => {
     // Create and configure mock service
     const mockDatadogService = new MockDatadogService();
-    mockDatadogService.setMonitors([
+    mockDatadogService.monitors = [
       createPagerDutyMonitor("api-critical", { id: 1, tags: ["env:prod"] }),
       createPagerDutyMonitor("api-non-critical", { id: 2, tags: ["env:staging"] }),
       createPagerDutyMonitor("database", { id: 3, tags: ["env:prod"] })
-    ]);
+    ];
     
     // Create test config directly in memory with team-specific webhooks
     const config = {
@@ -152,17 +155,17 @@ Deno.test("add-incidentio command - team webhook mode with additionalMetadata", 
     assertEquals(result.processed, 3, "Should process all monitors");
     
     // Verify that updateMonitor was called for each monitor
-    assertEquals(mockDatadogService.apiCalls.updateMonitor.length, 3, "Should update all monitors");
+    assertEquals(mockDatadogService.updateCalls.length, 3, "Should update all monitors");
     
     // Verify that we created the correct number of webhooks (for each team)
     assertEquals(
-      mockDatadogService.apiCalls.createWebhook.length, 
+      mockDatadogService.webhookCalls.length, 
       2, 
       "Should create a webhook for each team (api-team and platform-team)"
     );
     
     // Verify that we created the expected team-specific webhooks
-    const webhookNames = mockDatadogService.apiCalls.createWebhook.map(call => call.name);
+    const webhookNames = mockDatadogService.webhookCalls.map((call: DatadogWebhook) => call.name);
     assertEquals(
       webhookNames.includes("incident-io-api-team"), 
       true, 
@@ -175,8 +178,8 @@ Deno.test("add-incidentio command - team webhook mode with additionalMetadata", 
     );
     
     // Check that each team's webhook includes the correct additionalMetadata
-    const apiTeamWebhook = mockDatadogService.apiCalls.createWebhook
-      .find(webhook => webhook.name === "incident-io-api-team");
+    const apiTeamWebhook = mockDatadogService.webhookCalls
+      .find((webhook: DatadogWebhook) => webhook.name === "incident-io-api-team");
     
     if (!apiTeamWebhook) {
       throw new Error("Could not find webhook for api-team");
@@ -199,8 +202,8 @@ Deno.test("add-incidentio command - team webhook mode with additionalMetadata", 
     );
     
     // Check that the platform-team webhook has the correct metadata
-    const platformTeamWebhook = mockDatadogService.apiCalls.createWebhook
-      .find(webhook => webhook.name === "incident-io-platform-team");
+    const platformTeamWebhook = mockDatadogService.webhookCalls
+      .find((webhook: DatadogWebhook) => webhook.name === "incident-io-platform-team");
     
     if (!platformTeamWebhook) {
       throw new Error("Could not find webhook for platform-team");
@@ -223,8 +226,9 @@ Deno.test("add-incidentio command - team webhook mode with additionalMetadata", 
     );
     
     // Verify that monitors for api-team get the api-team webhook
-    const apiCriticalUpdate = mockDatadogService.apiCalls.updateMonitor
-      .find(update => update.data.message?.includes("api-critical"));
+    const apiCriticalUpdate = mockDatadogService.updateCalls
+      .find((update: { id: number; data: Partial<{ message: string }> }) => 
+        update.data.message?.includes("api-critical"));
     
     if (!apiCriticalUpdate) {
       throw new Error("Could not find update for api-critical monitor");
@@ -237,8 +241,9 @@ Deno.test("add-incidentio command - team webhook mode with additionalMetadata", 
     );
     
     // Verify that the database monitor gets the platform-team webhook
-    const dbUpdate = mockDatadogService.apiCalls.updateMonitor
-      .find(update => update.data.message?.includes("database"));
+    const dbUpdate = mockDatadogService.updateCalls
+      .find((update: { id: number; data: Partial<{ message: string }> }) => 
+        update.data.message?.includes("database"));
     
     if (!dbUpdate) {
       throw new Error("Could not find update for database monitor");

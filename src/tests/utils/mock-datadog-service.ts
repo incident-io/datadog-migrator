@@ -1,44 +1,39 @@
 /**
- * Mock implementation of the DatadogService for testing
+ * Unified mock implementation of the DatadogService for testing
  */
 import type { DatadogService as IDatadogService } from "../../services/datadog.ts";
 import { DatadogMonitor } from "../../types/index.ts";
 
 /**
- * Records of API calls made by the mock service
+ * Interface for Datadog webhook
  */
-export interface APICallRecord {
-  updateMonitor: {
-    id: number;
-    data: Partial<DatadogMonitor>;
-  }[];
-  createWebhook: {
-    name: string;
-    url: string;
-    payload: string;
-    customHeaders: string;
-  }[];
-  getWebhook: {
-    name: string;
-  }[];
+export interface DatadogWebhook {
+  name: string;
+  url: string;
+  payload: string;
+  customHeaders?: string;
 }
 
 /**
- * A mock DatadogService implementation for testing
+ * A unified mock DatadogService implementation for all tests
+ * This combines features from the previous implementations.
  */
 export class MockDatadogService {
-  private monitors: DatadogMonitor[] = [];
-  private webhooks: Record<string, { url: string; payload: string }> = {};
+  // Data storage
+  public monitors: DatadogMonitor[] = [];
+  public webhooks: Record<string, DatadogWebhook> = {};
   
-  // Records API calls for verification in tests
-  public apiCalls: APICallRecord = {
-    updateMonitor: [],
-    createWebhook: [],
-    getWebhook: [],
-  };
-
+  // Mock API objects for compatibility with real DatadogService
+  public monitorsApi = {};
+  public webhooksApi = {};
+  
+  // Call tracking for assertions
+  public updateCalls: Array<{ id: number; data: Partial<DatadogMonitor> }> = [];
+  public webhookCalls: DatadogWebhook[] = [];
+  
   /**
    * Set the mock monitors for testing
+   * This is a convenience method for setting up test data
    */
   public setMonitors(monitors: DatadogMonitor[]): void {
     this.monitors = [...monitors];
@@ -46,42 +41,58 @@ export class MockDatadogService {
 
   /**
    * Set existing webhooks for testing
+   * This is a convenience method for setting up test data
    */
-  public setWebhooks(webhooks: Record<string, { url: string; payload: string }>): void {
+  public setWebhooks(webhooks: Record<string, DatadogWebhook>): void {
     this.webhooks = { ...webhooks };
   }
 
   /**
    * Reset all mocked data and call records
+   * Useful for cleaning up between tests
    */
   public reset(): void {
     this.monitors = [];
     this.webhooks = {};
-    this.apiCalls = {
-      updateMonitor: [],
-      createWebhook: [],
-      getWebhook: [],
-    };
+    this.updateCalls = [];
+    this.webhookCalls = [];
   }
 
   /**
    * Mock implementation of getMonitors
    */
-  public getMonitors(): Promise<DatadogMonitor[]> {
-    return Promise.resolve([...this.monitors]);
+  public async getMonitors(): Promise<DatadogMonitor[]> {
+    try {
+      if (Deno.env.get("DEBUG") === "true") {
+        console.log("getMonitors called, returning:", JSON.stringify(this.monitors));
+      }
+    } catch (_) {
+      // Ignore env errors during testing
+    }
+    return [...this.monitors];
   }
 
   /**
    * Mock implementation of updateMonitor
    */
-  public updateMonitor(id: number, data: Partial<DatadogMonitor>): Promise<DatadogMonitor> {
-    // Record the call
-    this.apiCalls.updateMonitor.push({ id, data });
+  public async updateMonitor(id: number, data: Partial<DatadogMonitor>): Promise<DatadogMonitor> {
+    try {
+      if (Deno.env.get("DEBUG") === "true") {
+        console.log(`updateMonitor called for id ${id} with data:`, JSON.stringify(data));
+      }
+    } catch (_) {
+      // Ignore env errors during testing
+    }
     
-    // Find and update the monitor
+    // Record the call for assertions
+    this.updateCalls.push({ id, data });
+    
+    // Find and update the monitor in our data store
     const monitorIndex = this.monitors.findIndex(m => m.id === id);
     if (monitorIndex === -1) {
-      return Promise.reject(new Error(`Monitor not found: ${id}`));
+      const error = new Error(`Monitor not found: ${id}`);
+      console.error(error);
+      throw error;
     }
     
     const monitor = this.monitors[monitorIndex];
@@ -90,34 +101,52 @@ export class MockDatadogService {
       ...data,
     };
     
+    // Update the stored monitor
     this.monitors[monitorIndex] = updatedMonitor;
-    return Promise.resolve(updatedMonitor);
+    
+    return updatedMonitor;
   }
 
   /**
    * Mock implementation of getWebhook
    */
-  public getWebhook(name: string): Promise<{ url: string; payload: string } | null> {
-    // Record the call
-    this.apiCalls.getWebhook.push({ name });
+  public async getWebhook(name: string): Promise<DatadogWebhook | null> {
+    try {
+      if (Deno.env.get("DEBUG") === "true") {
+        console.log(`getWebhook called for ${name}`);
+      }
+    } catch (_) {
+      // Ignore env errors during testing
+    }
     
-    return Promise.resolve(this.webhooks[name] || null);
+    return this.webhooks[name] || null;
   }
 
   /**
    * Mock implementation of createWebhook
    */
-  public createWebhook({ name, url, payload, customHeaders }: {
-    name: string;
-    url: string;
-    payload: string;
-    customHeaders: string;
-  }): Promise<void> {
-    // Record the call
-    this.apiCalls.createWebhook.push({ name, url, payload, customHeaders });
+  public async createWebhook(webhook: DatadogWebhook): Promise<void> {
+    try {
+      if (Deno.env.get("DEBUG") === "true") {
+        console.log(`createWebhook called for ${webhook.name}`);
+      }
+    } catch (_) {
+      // Ignore env errors during testing
+    }
     
-    // Add the webhook
-    this.webhooks[name] = { url, payload };
-    return Promise.resolve();
+    // Record the call for assertions
+    this.webhookCalls.push(webhook);
+    
+    // Store the webhook
+    this.webhooks[webhook.name] = webhook;
+    
+    return;
   }
+}
+
+/**
+ * Factory function to create a configured mock DatadogService
+ */
+export function createMockDatadogService(): MockDatadogService {
+  return new MockDatadogService();
 }

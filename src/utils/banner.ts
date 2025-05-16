@@ -19,7 +19,7 @@ export function displayBanner(): void {
     };
 
     const message = boxen(
-      `${kleur.cyan(banner)}\n${kleur.yellow("incident.io <> PagerDuty Datadog migration tool")}`,
+      `${kleur.cyan(banner)}\n${kleur.yellow("incident.io <> PagerDuty/Opsgenie Datadog migration tool")}`,
       boxOptions,
     );
 
@@ -27,7 +27,7 @@ export function displayBanner(): void {
   } catch {
     // Fallback if figlet fails
     console.log(kleur.cyan("Datadog Migrator"));
-    console.log(kleur.yellow("incident.io <> PagerDuty Datadog migration tool"));
+    console.log(kleur.yellow("incident.io <> PagerDuty/Opsgenie Datadog migration tool"));
     console.log("");
   }
 }
