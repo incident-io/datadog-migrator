@@ -12,7 +12,7 @@ export interface MigrationMapping {
   opsgenieService?: string;
   incidentioTeam?: string | null;
   webhookName?: string;
-  additionalMetadata?: Record<string, string>; // Additional metadata for incident.io webhooks
+  additionalMetadata?: Record<string, string>;
 }
 
 export interface MigrationConfig {
@@ -25,19 +25,18 @@ export interface DatadogMonitor {
   name: string;
   message: string;
   tags: string[];
-  // Additional properties as needed
 }
 
 export enum MigrationType {
   ADD_INCIDENTIO_WEBHOOK = "add_incidentio",
   REMOVE_INCIDENTIO_WEBHOOK = "remove_incidentio",
-  REMOVE_PROVIDER = "remove_provider",  // Renamed from REMOVE_PAGERDUTY to be provider-agnostic
+  REMOVE_PROVIDER = "remove_provider",
 }
 
 export interface FilterOptions {
   tags?: string[];
-  name?: string;  // Changed from namePattern to match direct use
-  message?: string;  // Changed from messagePattern to match direct use
+  name?: string;
+  message?: string;
 }
 
 export interface MigrationOptions {

@@ -5,36 +5,37 @@ import Denomander from "https://deno.land/x/denomander@0.9.3/src/Denomander.ts";
 import { debug } from "../utils/config.ts";
 import { MigrationType } from "../types/index.ts";
 import { prepareFilterOptions } from "../types/prepareFilterOptions.ts";
-// Updated import to use shared utility
 import { MigrationCommandOptions } from "../types/cli.ts";
-import { 
+import {
   CommandOptions,
-  createDatadogService, 
+  createDatadogService,
   createMigrationService,
-  setupAuthOptions,
-  setupFilterOptions,
-  setupExecutionOptions,
   createSpinner,
+  displayMigrationResults,
+  setupAuthOptions,
+  setupExecutionOptions,
+  setupFilterOptions,
   withErrorHandling,
-  displayMigrationResults
 } from "../utils/command.ts";
 
 export function registerAddIncidentioCommand(program: Denomander): void {
   const command = program
     .command("add-incidentio")
-    .description("Add incident.io webhooks to monitors that use PagerDuty or Opsgenie");
-  
+    .description(
+      "Add incident.io webhooks to monitors that use PagerDuty or Opsgenie (supports additional metadata from config)",
+    );
+
   // Add standard options
   setupAuthOptions(command);
   setupFilterOptions(command);
   setupExecutionOptions(command);
-  
+
   // Add required config option
   command.requiredOption(
     CommandOptions.config.flag,
-    CommandOptions.config.description
+    CommandOptions.config.description,
   );
-  
+
   // Set command action
   command.action(
     withErrorHandling(async (options: MigrationCommandOptions) => {
@@ -46,20 +47,20 @@ export function registerAddIncidentioCommand(program: Denomander): void {
       const { migrationService, config } = createMigrationService(
         datadogService,
         options.config,
-        dryRunMode
+        dryRunMode,
       );
-      
+
       const incidentioConfig = config.incidentioConfig;
       const spinner = createSpinner();
 
       // Confirm action if not in dry run mode
       if (!dryRunMode) {
         spinner.stop();
-        
+
         // Get provider information from config
-        const provider = incidentioConfig.source || 'pagerduty';
-        const providerName = provider === 'opsgenie' ? 'Opsgenie' : 'PagerDuty';
-        
+        const provider = incidentioConfig.source || "pagerduty";
+        const providerName = provider === "opsgenie" ? "Opsgenie" : "PagerDuty";
+
         const webhookType = !incidentioConfig.webhookPerTeam
           ? "a single incident.io webhook (@webhook-incident-io)"
           : "team-specific incident.io webhooks (@webhook-incident-io-team)";
@@ -74,7 +75,12 @@ export function registerAddIncidentioCommand(program: Denomander): void {
           {
             type: "confirm",
             name: "confirmed",
-            message: `This will add ${webhookType}${tagMessage} to monitors with ${providerName} services.${!incidentioConfig.webhookPerTeam && incidentioConfig.addTeamTags ? `\n  Team tags will be derived from your ${providerName}-to-team mappings in config.json.` : ""}\n  Continue?`,
+            message:
+              `This will add ${webhookType}${tagMessage} to monitors with ${providerName} services.${
+                !incidentioConfig.webhookPerTeam && incidentioConfig.addTeamTags
+                  ? `\n  Team tags will be derived from your ${providerName}-to-team mappings in config.json.`
+                  : ""
+              }\n  Continue?`,
             default: false,
           },
         ]);
@@ -83,7 +89,7 @@ export function registerAddIncidentioCommand(program: Denomander): void {
           console.log(kleur.yellow("Operation cancelled."));
           Deno.exit(0);
         }
-        
+
         spinner.start("Connecting to Datadog API");
       }
 
@@ -91,9 +97,7 @@ export function registerAddIncidentioCommand(program: Denomander): void {
 
       // Perform migration
       spinner.start(
-        dryRunMode
-          ? "Simulating migration..."
-          : "Migrating monitors..."
+        dryRunMode ? "Simulating migration..." : "Migrating monitors...",
       );
 
       // Prepare filter options if specified
@@ -108,6 +112,6 @@ export function registerAddIncidentioCommand(program: Denomander): void {
       });
 
       displayMigrationResults(spinner, "add", result, options);
-    })
+    }),
   );
 }

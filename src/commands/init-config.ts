@@ -315,15 +315,41 @@ export function registerInitConfigCommand(program: Denomander): void {
                 for (const service of detectedServices) {
                   if (!existingServices.has(service)) {
                     if (provider === "opsgenie") {
-                      defaultConfig.mappings.push({
-                        opsgenieService: service,
-                        incidentioTeam: null, // Placeholder for user to fill in
-                      });
+                      // Add an example of additionalMetadata for the first service
+                      if (newMappings.length === 0) {
+                        defaultConfig.mappings.push({
+                          opsgenieService: service,
+                          incidentioTeam: null, // Placeholder for user to fill in
+                          additionalMetadata: {
+                            // Example metadata - useful for differentiating similar services
+                            "priority": "high",
+                            "environment": "production"
+                          }
+                        });
+                      } else {
+                        defaultConfig.mappings.push({
+                          opsgenieService: service,
+                          incidentioTeam: null, // Placeholder for user to fill in
+                        });
+                      }
                     } else {
-                      defaultConfig.mappings.push({
-                        pagerdutyService: service,
-                        incidentioTeam: null, // Placeholder for user to fill in
-                      });
+                      // Add an example of additionalMetadata for the first service
+                      if (newMappings.length === 0) {
+                        defaultConfig.mappings.push({
+                          pagerdutyService: service,
+                          incidentioTeam: null, // Placeholder for user to fill in
+                          additionalMetadata: {
+                            // Example metadata - useful for differentiating similar services
+                            "priority": "high",
+                            "environment": "production"
+                          }
+                        });
+                      } else {
+                        defaultConfig.mappings.push({
+                          pagerdutyService: service,
+                          incidentioTeam: null, // Placeholder for user to fill in
+                        });
+                      }
                     }
                     newMappings.push(service);
                   }
@@ -346,6 +372,22 @@ export function registerInitConfigCommand(program: Denomander): void {
                     kleur.yellow(
                       "\nPlease edit the file to fill and set the relevant incident-io teams before running the 'add-incidentio' command.",
                     ),
+                  );
+                  
+                  // Add advice about additionalMetadata
+                  console.log(
+                    kleur.cyan(
+                      "\nTIP: You can use additionalMetadata fields to add extra context to your alerts:",
+                    ),
+                  );
+                  console.log(
+                    "1. Differentiate between critical and non-critical services mapping to the same team",
+                  );
+                  console.log(
+                    "2. Include environment or service details in your alerts",
+                  );
+                  console.log(
+                    "3. With single webhooks, these fields become monitor tags; with team webhooks, they're added to payloads",
                   );
                   Deno.exit(0);
                 }
