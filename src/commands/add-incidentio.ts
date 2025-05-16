@@ -14,7 +14,7 @@ const identity = (i: string) => i;
 export function registerAddIncidentioCommand(program: Denomander): void {
   program
     .command("add-incidentio")
-    .description("Add incident.io webhooks to monitors that use PagerDuty")
+    .description("Add incident.io webhooks to monitors that use PagerDuty or Opsgenie")
     .option(
       "-k, --api-key",
       "Datadog API key",
@@ -66,6 +66,10 @@ export function registerAddIncidentioCommand(program: Denomander): void {
           // Confirm action if not in dry run mode
           if (!options["dry-run"]) {
             spinner.stop();
+            // Get provider information from config
+            const provider = incidentioConfig.source || 'pagerduty';
+            const providerName = provider === 'opsgenie' ? 'Opsgenie' : 'PagerDuty';
+            
             const webhookType = !incidentioConfig.webhookPerTeam
               ? "a single incident.io webhook (@webhook-incident-io)"
               : "team-specific incident.io webhooks (@webhook-incident-io-team)";
@@ -80,7 +84,7 @@ export function registerAddIncidentioCommand(program: Denomander): void {
               {
                 type: "confirm",
                 name: "confirmed",
-                message: `This will add ${webhookType}${tagMessage} to monitors with PagerDuty services.${!incidentioConfig.webhookPerTeam && incidentioConfig.addTeamTags ? "\n  Team tags will be derived from your PagerDuty-to-team mappings in config.json." : ""}\n  Continue?`,
+                message: `This will add ${webhookType}${tagMessage} to monitors with ${providerName} services.${!incidentioConfig.webhookPerTeam && incidentioConfig.addTeamTags ? `\n  Team tags will be derived from your ${providerName}-to-team mappings in config.json.` : ""}\n  Continue?`,
                 default: false,
               },
             ]);

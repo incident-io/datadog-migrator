@@ -4,10 +4,12 @@ export interface IncidentioConfig {
   webhookToken?: string;
   addTeamTags?: boolean;
   teamTagPrefix?: string;
+  source: 'pagerduty' | 'opsgenie';
 }
 
 export interface MigrationMapping {
   pagerdutyService?: string;
+  opsgenieService?: string;
   incidentioTeam?: string | null;
   webhookName?: string;
   additionalMetadata?: Record<string, string>; // Additional metadata for incident.io webhooks

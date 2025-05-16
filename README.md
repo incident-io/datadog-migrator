@@ -1,14 +1,14 @@
-# Datadog PagerDuty Migrator
+# Datadog Alert Migrator
 
-A CLI tool to help migrate Datadog monitors over from PagerDuty to incident.io.
+A CLI tool to help migrate Datadog monitors over from PagerDuty or Opsgenie to incident.io.
 
 ## Features
 
-- Add incident.io webhooks to monitors that currently use PagerDuty
+- Add incident.io webhooks to monitors that currently use PagerDuty or Opsgenie
 - Remove incident.io webhooks from monitors
-- Remove PagerDuty service mentions from monitors
+- Remove PagerDuty or Opsgenie service mentions from monitors
 - Support for team-specific webhook mapping
-- Add team tags to monitors based on PagerDuty service mappings
+- Add team tags to monitors based on provider service mappings
 - Support for additional metadata in webhook payloads
 - Automatic webhook creation in Datadog
 - Configuration via command line, interactive prompts, or config file
@@ -49,14 +49,14 @@ sudo mv ./datadog-migrator-darwin-arm64 /usr/local/bin/datadog-migrator
 # Initialize a new configuration
 datadog-migrator init
 
-# Add incident.io webhooks to monitors using PagerDuty
+# Add incident.io webhooks to monitors using PagerDuty or Opsgenie
 datadog-migrator add-incidentio --api-key YOUR_API_KEY --app-key YOUR_APP_KEY --config config.json
 
 # Remove incident.io webhooks from monitors
 datadog-migrator remove-incidentio --api-key YOUR_API_KEY --app-key YOUR_APP_KEY --config config.json
 
-# Remove PagerDuty mentions from monitors
-datadog-migrator remove-pagerduty --api-key YOUR_API_KEY --app-key YOUR_APP_KEY --config config.json
+# Remove PagerDuty or Opsgenie mentions from monitors
+datadog-migrator remove-provider --api-key YOUR_API_KEY --app-key YOUR_APP_KEY --config config.json
 
 # Analyze monitors without making changes
 datadog-migrator analyze --api-key YOUR_API_KEY --app-key YOUR_APP_KEY --config config.json
@@ -78,15 +78,16 @@ Options:
 - `--path <path>` - Path to save the config file (default: ./config.json)
 
 The init command will:
-1. Ask how you want to tag incident.io webhooks (single webhook or team-specific)
-2. If using a single webhook, ask if you want to add team tags to monitors
-3. Collect incident.io alert source URL and webhook token
-4. Scan for PagerDuty services in your monitors
-5. Create a config file with mappings template
+1. Ask which provider you're migrating from (PagerDuty or Opsgenie)
+2. Ask how you want to tag incident.io webhooks (single webhook or team-specific)
+3. If using a single webhook, ask if you want to add team tags to monitors
+4. Collect incident.io alert source URL and webhook token
+5. Scan for PagerDuty or Opsgenie services in your monitors
+6. Create a config file with mappings template
 
 ### add-incidentio
 
-Add incident.io webhooks to monitors that currently use PagerDuty:
+Add incident.io webhooks to monitors that currently use PagerDuty or Opsgenie:
 
 ```bash
 datadog-migrator add-incidentio
@@ -121,12 +122,12 @@ Options:
 - `-n, --name <pattern>` - Filter monitors by name pattern
 - `--message <pattern>` - Filter monitors by message pattern
 
-### remove-pagerduty
+### remove-provider
 
-Remove PagerDuty service mentions from monitors:
+Remove PagerDuty or Opsgenie service mentions from monitors:
 
 ```bash
-datadog-migrator remove-pagerduty
+datadog-migrator remove-provider
 ```
 
 Options:
@@ -141,7 +142,7 @@ Options:
 
 ### analyze
 
-Analyze monitors to find PagerDuty services and incident.io webhooks without making changes:
+Analyze monitors to find PagerDuty or Opsgenie services and incident.io webhooks without making changes:
 
 ```bash
 datadog-migrator analyze
@@ -167,7 +168,8 @@ You can configure the tool using a JSON configuration file. The tool will create
     "webhookUrl": "https://api.incident.io/v2/alerts/incoming/123456789",
     "webhookToken": "your_webhook_token",
     "addTeamTags": true,
-    "teamTagPrefix": "team"
+    "teamTagPrefix": "team",
+    "source": "pagerduty"
   },
   "mappings": [
     {
@@ -205,8 +207,9 @@ You can configure the tool using a JSON configuration file. The tool will create
 - `webhookToken`: The secret token for your incident.io alert source
 - `addTeamTags`: (Optional) Whether to add team tags to monitors when using single webhook mode
 - `teamTagPrefix`: (Optional) The prefix to use for team tags (default: "team")
-- `mappings`: An array of mappings from PagerDuty service names to incident.io team names
-  - `pagerdutyService`: The PagerDuty service name
+- `source`: (Optional) The provider you're migrating from ("pagerduty" or "opsgenie", default: "pagerduty")
+- `mappings`: An array of mappings from provider service names to incident.io team names
+  - `pagerdutyService`: The provider service name (PagerDuty or Opsgenie)
   - `incidentioTeam`: The incident.io team name to route alerts to
   - `additionalMetadata`: (Optional) Additional metadata fields to include in webhook payloads or as tags
 
@@ -215,7 +218,7 @@ You can configure the tool using a JSON configuration file. The tool will create
 The `additionalMetadata` field allows you to include extra metadata in your incident.io alerts. This is useful for:
 
 1. Adding priority information to distinguish between critical and non-critical alerts
-2. Adding service information when multiple PagerDuty services map to the same team
+2. Adding service information when multiple provider services map to the same team
 3. Including environment details or other contextual information
 
 When using team-specific webhooks, this metadata is included directly in the webhook payload. When using a single webhook with team tags, these values are also added as tags to the monitor in the format `key:value`.

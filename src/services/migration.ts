@@ -8,8 +8,8 @@ import {
   MigrationType,
 } from "../types/index.ts";
 import { debug } from "../utils/config.ts";
-import { PAGERDUTY_SERVICE_REGEX } from "../utils/regex.ts";
 import kleur from "kleur";
+import { getServiceRegexForProvider } from "../utils/regex.ts";
 
 export type MigrationChange = {
   id: number;
@@ -56,21 +56,36 @@ export class MigrationService {
     this.dryRun = options.dryRun || false;
   }
 
-
   private getIncidentioWebhookPattern(): RegExp {
     // Match @webhook-incident-io or @webhook-incident-io-team-name with variations
     return /@webhook-incident-io(?:-[a-zA-Z0-9_-]+)*/g;
   }
 
-  private findPagerDutyServices(message: string): string[] {
-    const matches = message.match(PAGERDUTY_SERVICE_REGEX);
+  /**
+   * Find service mentions in the message based on the configured provider
+   * Works with both PagerDuty and Opsgenie
+   */
+  private findProviderServices(message: string): string[] {
+    // Get the regex pattern based on the provider
+    const provider = this.incidentioConfig.source || "pagerduty"; // Default to PagerDuty if not specified
+    const regex = getServiceRegexForProvider(provider);
+
+    const matches = message.match(regex);
     if (!matches) return [];
 
     return matches.map((match) => {
-      // Extract the service name from @pagerduty-ServiceName
+      // Extract the service name from @pagerduty-ServiceName or @opsgenie-ServiceName
       const parts = match.split("-");
       return parts.slice(1).join("-");
     });
+  }
+
+  /**
+   * Legacy method for backward compatibility
+   * @deprecated Use findProviderServices instead
+   */
+  private findPagerDutyServices(message: string): string[] {
+    return this.findProviderServices(message);
   }
 
   private findIncidentioWebhooks(message: string): string[] {
@@ -111,16 +126,42 @@ export class MigrationService {
     return webhookName;
   }
 
-  private getTeamForPagerDutyService(service: string): string | undefined {
-    const mapping = this.mappings.find((m) => m.pagerdutyService === service);
+  private getTeamForProviderService(service: string): string | undefined {
+    const provider = this.incidentioConfig.source || "pagerduty"; // Default to PagerDuty if not specified
+    
+    // Find mapping based on provider
+    const mapping = this.mappings.find((m) => 
+      provider === "opsgenie" 
+        ? m.opsgenieService === service 
+        : m.pagerdutyService === service
+    );
+    
     debug(
-      `Looking up team for PagerDuty service "${service}": ${mapping?.incidentioTeam ?? "not found"}`,
+      `Looking up team for ${provider} service "${service}": ${
+        mapping?.incidentioTeam ?? "not found"
+      }`,
     );
     return mapping?.incidentioTeam ?? undefined;
   }
-  
+
+  /**
+   * Legacy method for backward compatibility
+   * @deprecated Use getTeamForProviderService instead
+   */
+  private getTeamForPagerDutyService(service: string): string | undefined {
+    return this.getTeamForProviderService(service);
+  }
+
   private getMappingForService(service: string): MigrationMapping {
-    return this.mappings.find((m) => m.pagerdutyService === service) || { pagerdutyService: service };
+    const provider = this.incidentioConfig.source || "pagerduty";
+    
+    if (provider === "opsgenie") {
+      return this.mappings.find((m) => m.opsgenieService === service) ||
+        { opsgenieService: service };
+    } else {
+      return this.mappings.find((m) => m.pagerdutyService === service) ||
+        { pagerdutyService: service };
+    }
   }
 
   /**
@@ -143,7 +184,9 @@ export class MigrationService {
     return monitors.filter((monitor) => {
       // Filter by tags
       if (filterOptions.tags && filterOptions.tags.length > 0) {
-        if (!monitor.tags.some((tag: string) => filterOptions.tags!.includes(tag))) {
+        if (
+          !monitor.tags.some((tag: string) => filterOptions.tags!.includes(tag))
+        ) {
           return false;
         }
       }
@@ -169,19 +212,21 @@ export class MigrationService {
   }
 
   /**
-   * Validate that all PagerDuty services have mappings
+   * Validate that all provider services (PagerDuty or Opsgenie) have mappings
    */
-  private validatePagerDutyMappings(
+  private validateProviderMappings(
     monitors: DatadogMonitor[],
   ): MigrationValidation {
     const servicesInMonitors = new Set<string>();
+    const provider = this.incidentioConfig.source || "pagerduty"; // Default to PagerDuty if not specified
+    const regex = getServiceRegexForProvider(provider);
 
-    // Find all unique PagerDuty services in monitors
+    // Find all unique provider services in monitors
     for (const monitor of monitors) {
-      const pdMatches = monitor.message.match(PAGERDUTY_SERVICE_REGEX);
+      const serviceMatches = monitor.message.match(regex);
 
-      if (pdMatches) {
-        for (const match of pdMatches) {
+      if (serviceMatches) {
+        for (const match of serviceMatches) {
           const parts = match.split("-");
           const service = parts.slice(1).join("-");
           servicesInMonitors.add(service);
@@ -192,8 +237,13 @@ export class MigrationService {
     // Check if all services have valid mappings
     const mappedServices = new Map<string, string | null | undefined>(
       this.mappings
-        .filter((m) => m.pagerdutyService)
-        .map((m) => [m.pagerdutyService as string, m.incidentioTeam]),
+        .filter((m) => provider === "opsgenie" ? m.opsgenieService : m.pagerdutyService)
+        .map((m) => [
+          provider === "opsgenie" 
+            ? m.opsgenieService as string 
+            : m.pagerdutyService as string, 
+          m.incidentioTeam
+        ]),
     );
 
     const unmappedServices: string[] = [];
@@ -224,8 +274,7 @@ export class MigrationService {
     // Team mappings are required in two scenarios:
     // 1. When using team-specific webhooks
     // 2. When using a single webhook but with addTeamTags enabled
-    const requireTeamMappings =
-      this.incidentioConfig.webhookPerTeam ||
+    const requireTeamMappings = this.incidentioConfig.webhookPerTeam ||
       this.incidentioConfig.addTeamTags === true;
 
     // For validation to pass:
@@ -233,8 +282,7 @@ export class MigrationService {
     // - If team mappings are required, we also need:
     //   - No null mappings
     //   - No invalid team names
-    const valid =
-      unmappedServices.length === 0 &&
+    const valid = unmappedServices.length === 0 &&
       (!requireTeamMappings ||
         (nullMappings.length === 0 &&
           Object.keys(invalidTeamNames).length === 0));
@@ -261,20 +309,23 @@ export class MigrationService {
     // Always validate mappings for add-incidentio
     let validationResults;
     if (options.type === MigrationType.ADD_INCIDENTIO_WEBHOOK) {
-      validationResults = this.validatePagerDutyMappings(monitors);
+      validationResults = this.validateProviderMappings(monitors);
 
       // If validation fails, and we're not in dry run mode, abort
       if (!validationResults.valid && !options.dryRun) {
         if (validationResults.unmappedServices.length > 0) {
+          const provider = this.incidentioConfig.source || "pagerduty";
+          const providerName = provider === "opsgenie" ? "Opsgenie" : "PagerDuty";
           throw new Error(
-            `Missing mappings for PagerDuty services: ${validationResults.unmappedServices.join(", ")}\n\n` +
+            `Missing mappings for ${providerName} services: ${
+              validationResults.unmappedServices.join(", ")
+            }\n\n` +
               `Please add these services to your config file before migrating.`,
           );
         }
 
         // Both webhook-per-team and addTeamTags scenarios require proper team assignments
-        const requiresTeamMappings =
-          this.incidentioConfig.webhookPerTeam ||
+        const requiresTeamMappings = this.incidentioConfig.webhookPerTeam ||
           this.incidentioConfig.addTeamTags;
 
         if (validationResults.nullMappings.length > 0 && requiresTeamMappings) {
@@ -282,10 +333,14 @@ export class MigrationService {
             ? "When using team-specific webhooks"
             : "When adding team tags based on mappings";
 
+          const provider = this.incidentioConfig.source || "pagerduty";
+          const providerName = provider === "opsgenie" ? "Opsgenie" : "PagerDuty";
           throw new Error(
-            `${contextMessage}, all PagerDuty services must have team assignments.\n` +
-              `Missing team assignments for: ${validationResults.nullMappings.join(", ")}\n\n` +
-              `Please edit your config file to assign incident.io teams to these PagerDuty services before migrating.\n`,
+            `${contextMessage}, all ${providerName} services must have team assignments.\n` +
+              `Missing team assignments for: ${
+                validationResults.nullMappings.join(", ")
+              }\n\n` +
+              `Please edit your config file to assign incident.io teams to these ${providerName} services before migrating.\n`,
           );
         }
 
@@ -298,10 +353,14 @@ export class MigrationService {
             ? "When using team-specific webhooks"
             : "When adding team tags based on mappings";
 
+          const provider = this.incidentioConfig.source || "pagerduty";
+          const providerName = provider === "opsgenie" ? "Opsgenie" : "PagerDuty";
           throw new Error(
             `${contextMessage}, team names must be in a valid format (lowercase alphanumeric with hyphens).\n` +
-              `Invalid team names for services:\n${validationResults.invalidTeamNames.join("\n")}\n\n` +
-              `Please edit your config file to use valid team names for these PagerDuty services.\n`,
+              `Invalid team names for services:\n${
+                validationResults.invalidTeamNames.join("\n")
+              }\n\n` +
+              `Please edit your config file to use valid team names for these ${providerName} services.\n`,
           );
         }
       }
@@ -407,8 +466,8 @@ export class MigrationService {
             kleur.yellow(
               `\nMissing incident.io webhook token. You can either:
 - Add it to your config file under incidentioConfig.webhookToken, or
-- Set it in your .env file as INCIDENTIO_WEBHOOK_TOKEN to avoid storing it in your config`
-            )
+- Set it in your .env file as INCIDENTIO_WEBHOOK_TOKEN to avoid storing it in your config`,
+            ),
           );
         }
         return false;
@@ -500,19 +559,23 @@ export class MigrationService {
     debug(`Process monitor ${monitor.id} with dryRun=${dryRun}`);
     debug(`Monitor message: "${message}"`);
 
+    const provider = this.incidentioConfig.source || "pagerduty"; // Default to PagerDuty if not specified
+
     switch (options.type) {
       case MigrationType.ADD_INCIDENTIO_WEBHOOK:
-        const pagerDutyServices = this.findPagerDutyServices(message);
+        const providerServices = this.findProviderServices(message);
         debug(
-          `Found PagerDuty services in monitor ${monitor.id}: ${JSON.stringify(pagerDutyServices)}`,
+          `Found ${provider} services in monitor ${monitor.id}: ${
+            JSON.stringify(providerServices)
+          }`,
         );
 
-        if (pagerDutyServices.length === 0) {
-          debug(`No PagerDuty services found in monitor ${monitor.id}`);
+        if (providerServices.length === 0) {
+          debug(`No ${provider} services found in monitor ${monitor.id}`);
           return {
             updated: false,
             message: newMessage,
-            reason: "No PagerDuty services found",
+            reason: `No ${provider} services found`,
             tagsBefore,
             tagsAfter,
           };
@@ -521,7 +584,9 @@ export class MigrationService {
         // Check for existing incident.io webhooks
         const existingWebhooks = this.findIncidentioWebhooks(message);
         debug(
-          `Found existing webhooks in monitor ${monitor.id}: ${JSON.stringify(existingWebhooks)}`,
+          `Found existing webhooks in monitor ${monitor.id}: ${
+            JSON.stringify(existingWebhooks)
+          }`,
         );
 
         if (!options.webhookPerTeam) {
@@ -546,21 +611,23 @@ export class MigrationService {
 
           // Check if we need to add team tags or metadata tags when using single webhook
           if (
-            (!this.incidentioConfig.webhookPerTeam) && 
-            (this.incidentioConfig.addTeamTags || pagerDutyServices.some(service => {
-              const mapping = this.getMappingForService(service);
-              return mapping.additionalMetadata && Object.keys(mapping.additionalMetadata).length > 0;
-            }))
+            (!this.incidentioConfig.webhookPerTeam) &&
+            (this.incidentioConfig.addTeamTags ||
+              providerServices.some((service) => {
+                const mapping = this.getMappingForService(service);
+                return mapping.additionalMetadata &&
+                  Object.keys(mapping.additionalMetadata).length > 0;
+              }))
           ) {
             let tagsUpdated = false;
             tagsBefore = [...monitor.tags]; // Store original tags
             const monitorTags = [...monitor.tags]; // Clone the tags array
 
             // Add team tags for each service in the monitor
-            for (const service of pagerDutyServices) {
+            for (const service of providerServices) {
               const mapping = this.getMappingForService(service);
               const team = mapping.incidentioTeam;
-              
+
               // Add team tags if enabled
               if (this.incidentioConfig.addTeamTags && team) {
                 const teamTag = this.createTeamTag(team);
@@ -570,15 +637,21 @@ export class MigrationService {
                   debug(`Adding tag ${teamTag} to monitor ${monitor.id}`);
                 }
               }
-              
+
               // Always add additional metadata as tags if present
               if (mapping.additionalMetadata) {
-                for (const [key, value] of Object.entries(mapping.additionalMetadata)) {
+                for (
+                  const [key, value] of Object.entries(
+                    mapping.additionalMetadata,
+                  )
+                ) {
                   const metadataTag = `${key}:${value}`;
                   if (!monitorTags.includes(metadataTag)) {
                     monitorTags.push(metadataTag);
                     tagsUpdated = true;
-                    debug(`Adding metadata tag ${metadataTag} to monitor ${monitor.id}`);
+                    debug(
+                      `Adding metadata tag ${metadataTag} to monitor ${monitor.id}`,
+                    );
                   }
                 }
               }
@@ -627,9 +700,11 @@ export class MigrationService {
 
           // Calculate expected webhooks based on mappings
           const expectedWebhooks = new Set<string>();
-          for (const service of pagerDutyServices) {
-            const mapping = this.mappings.find(m => m.pagerdutyService === service);
-            const team = mapping?.incidentioTeam;
+          for (const service of providerServices) {
+            const mapping = this.mappings.find((m) =>
+              m.pagerdutyService === service
+            );
+            const team = mapping?.incidentioTeam ?? undefined;
             const webhookName = this.getWebhookNameForTeam(team);
 
             // Create team-specific webhook if needed
@@ -637,13 +712,15 @@ export class MigrationService {
               const webhookCreated = await this.ensureWebhookExists(
                 webhookName,
                 team,
-                mapping?.additionalMetadata // Pass the additional metadata
+                mapping?.additionalMetadata, // Pass the additional metadata
               );
               if (!webhookCreated) {
                 return {
                   updated: false,
                   message: newMessage,
-                  reason: `Failed to create required webhook for team ${team || "unknown"}`,
+                  reason: `Failed to create required webhook for team ${
+                    team || "unknown"
+                  }`,
                   tagsBefore,
                   tagsAfter,
                 };
@@ -654,16 +731,17 @@ export class MigrationService {
           }
 
           debug(
-            `Expected webhooks for monitor ${monitor.id}: ${[...expectedWebhooks].join(", ")}`,
+            `Expected webhooks for monitor ${monitor.id}: ${
+              [...expectedWebhooks].join(", ")
+            }`,
           );
 
           // Check if existing webhooks match expected ones
           const existingWebhooksSet = new Set(existingWebhooks);
-          const needsUpdate =
-            existingWebhooks.length === 0 || // No webhooks yet
+          const needsUpdate = existingWebhooks.length === 0 || // No webhooks yet
             existingWebhooksSet.size !== expectedWebhooks.size || // Different number of webhooks
             ![...expectedWebhooks].every((webhook) =>
-              existingWebhooksSet.has(webhook),
+              existingWebhooksSet.has(webhook)
             ); // Different webhooks
 
           if (needsUpdate) {
@@ -719,20 +797,21 @@ export class MigrationService {
         break;
 
       case MigrationType.REMOVE_PAGERDUTY:
-        const pdServices = this.findPagerDutyServices(message);
+        const serviceRegex = getServiceRegexForProvider(provider);
+        const services = this.findProviderServices(message);
 
-        if (pdServices.length === 0) {
+        if (services.length === 0) {
           return {
             updated: false,
             message: newMessage,
-            reason: "No PagerDuty services found",
+            reason: `No ${provider} services found`,
             tagsBefore,
             tagsAfter,
           };
         }
 
         newMessage = newMessage
-          .replace(PAGERDUTY_SERVICE_REGEX, "")
+          .replace(serviceRegex, "")
           .replace(/\s+/g, " ")
           .trim();
         updated = true;
@@ -743,7 +822,9 @@ export class MigrationService {
 
     if (updated && !dryRun) {
       const debugMessage = tagsAfter
-        ? `EXECUTING UPDATE - Attempting to update monitor ${monitor.id} with message: "${newMessage}" and tags: ${JSON.stringify(tagsAfter)}`
+        ? `EXECUTING UPDATE - Attempting to update monitor ${monitor.id} with message: "${newMessage}" and tags: ${
+          JSON.stringify(tagsAfter)
+        }`
         : `EXECUTING UPDATE - Attempting to update monitor ${monitor.id} with message: "${newMessage}"`;
       debug(debugMessage);
       try {
@@ -768,16 +849,22 @@ export class MigrationService {
         );
       } catch (error) {
         debug(
-          `CRITICAL ERROR - Failed to update monitor ${monitor.id}: ${error instanceof Error ? error.message : String(error)}`,
+          `CRITICAL ERROR - Failed to update monitor ${monitor.id}: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
         );
         console.error(
-          `Failed to update monitor ${monitor.id}: ${error instanceof Error ? error.message : String(error)}`,
+          `Failed to update monitor ${monitor.id}: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
         );
         // Return false to indicate the update failed
         return {
           updated: false,
           message: message,
-          reason: `API update failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+          reason: `API update failed: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`,
           tagsBefore,
           tagsAfter,
         };

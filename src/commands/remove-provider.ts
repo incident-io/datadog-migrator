@@ -11,10 +11,10 @@ import { displayMigrationResults } from "./remove-incidentio.ts";
 import Denomander from "https://deno.land/x/denomander@0.9.3/src/Denomander.ts";
 
 const identity = (i: string) => i;
-export function registerRemovePagerdutyCommand(program: Denomander): void {
+export function registerRemoveProviderCommand(program: Denomander): void {
   program
-    .command("remove-pagerduty")
-    .description("Remove PagerDuty service mentions from monitors")
+    .command("remove-provider")
+    .description("Remove PagerDuty or Opsgenie service mentions from monitors")
     .option(
       "-k, --api-key",
       "Datadog API key",
@@ -60,10 +60,14 @@ export function registerRemovePagerdutyCommand(program: Denomander): void {
             appKey: options["app-key"],
           });
 
+          // Get provider information
+          const provider = incidentioConfig.source || 'pagerduty';
+          const providerName = provider === 'opsgenie' ? 'Opsgenie' : 'PagerDuty';
+          
           // Confirm action with stronger verification
           if (!options["dry-run"]) {
             console.log(kleur.yellow("\n⚠️  WARNING: This is a destructive operation ⚠️"));
-            console.log(kleur.yellow("This will remove all PagerDuty service mentions from your monitors."));
+            console.log(kleur.yellow(`This will remove all ${providerName} service mentions from your monitors.`));
             console.log(kleur.yellow("This action cannot be automatically undone.\n"));
             
             const { confirmText } = await inquirer.prompt([
@@ -83,7 +87,7 @@ export function registerRemovePagerdutyCommand(program: Denomander): void {
               Deno.exit(0);
             }
             
-            console.log(kleur.green("Confirmation received. Proceeding with PagerDuty removal..."));
+            console.log(kleur.green(`Confirmation received. Proceeding with ${providerName} removal...`));
           }
 
           // Create migration service
@@ -99,7 +103,7 @@ export function registerRemovePagerdutyCommand(program: Denomander): void {
           spinner.start(
             options["dry-run"]
               ? "Simulating removal..."
-              : "Removing PagerDuty service mentions...",
+              : `Removing ${providerName} service mentions...`,
           );
 
           // Prepare filter options if specified

@@ -65,6 +65,7 @@ export function createDefaultConfig(): MigrationConfig {
       webhookToken: undefined,
       addTeamTags: false,
       teamTagPrefix: "team",
+      source: "datadog",
     },
     mappings: [],
   };
