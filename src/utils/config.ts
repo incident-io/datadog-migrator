@@ -35,6 +35,7 @@ export function loadConfig(filePath: string): MigrationConfig {
         webhookPerTeam: false,
         webhookUrl: undefined,
         webhookToken: undefined,
+        source: "pagerduty" // Default to PagerDuty if not specified
       };
     }
 
@@ -65,7 +66,7 @@ export function createDefaultConfig(): MigrationConfig {
       webhookToken: undefined,
       addTeamTags: false,
       teamTagPrefix: "team",
-      source: "datadog",
+      source: "pagerduty", // Default to PagerDuty
     },
     mappings: [],
   };

@@ -80,14 +80,6 @@ export class MigrationService {
     });
   }
 
-  /**
-   * Legacy method for backward compatibility
-   * @deprecated Use findProviderServices instead
-   */
-  private findPagerDutyServices(message: string): string[] {
-    return this.findProviderServices(message);
-  }
-
   private findIncidentioWebhooks(message: string): string[] {
     // Find all webhook mentions in the message
     const pattern = this.getIncidentioWebhookPattern();
@@ -191,18 +183,18 @@ export class MigrationService {
         }
       }
 
-      // Filter by name pattern
+      // Filter by name
       if (
-        filterOptions.namePattern &&
-        !filterOptions.namePattern.test(monitor.name)
+        filterOptions.name &&
+        !new RegExp(filterOptions.name, "i").test(monitor.name)
       ) {
         return false;
       }
 
-      // Filter by message pattern
+      // Filter by message
       if (
-        filterOptions.messagePattern &&
-        !filterOptions.messagePattern.test(monitor.message)
+        filterOptions.message &&
+        !new RegExp(filterOptions.message, "i").test(monitor.message)
       ) {
         return false;
       }
@@ -796,7 +788,7 @@ export class MigrationService {
         }
         break;
 
-      case MigrationType.REMOVE_PAGERDUTY:
+      case MigrationType.REMOVE_PROVIDER:
         const serviceRegex = getServiceRegexForProvider(provider);
         const services = this.findProviderServices(message);
 

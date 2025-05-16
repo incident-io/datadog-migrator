@@ -31,13 +31,13 @@ export interface DatadogMonitor {
 export enum MigrationType {
   ADD_INCIDENTIO_WEBHOOK = "add_incidentio",
   REMOVE_INCIDENTIO_WEBHOOK = "remove_incidentio",
-  REMOVE_PAGERDUTY = "remove_pagerduty",
+  REMOVE_PROVIDER = "remove_provider",  // Renamed from REMOVE_PAGERDUTY to be provider-agnostic
 }
 
 export interface FilterOptions {
   tags?: string[];
-  namePattern?: RegExp;
-  messagePattern?: RegExp;
+  name?: string;  // Changed from namePattern to match direct use
+  message?: string;  // Changed from messagePattern to match direct use
 }
 
 export interface MigrationOptions {

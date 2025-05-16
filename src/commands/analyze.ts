@@ -1,115 +1,94 @@
 import kleur from "kleur";
-import ora from "ora";
 import boxen from "boxen";
-
-import { DatadogService } from "../services/datadog.ts";
-import { loadConfig } from "../utils/config.ts";
-import { DatadogMonitor, MigrationMapping } from "../types/index.ts";
-import { getServiceRegexForProvider } from "../utils/regex.ts";
 import Denomander from "https://deno.land/x/denomander@0.9.3/src/Denomander.ts";
 
-const identity = (i: string) => i;
+import { DatadogMonitor, MigrationMapping } from "../types/index.ts";
+import { getServiceRegexForProvider } from "../utils/regex.ts";
+import { AnalyzeCommandOptions } from "../types/cli.ts";
+import { 
+  CommandOptions,
+  createDatadogService,
+  setupAuthOptions,
+  setupFilterOptions,
+  createSpinner,
+  withErrorHandling,
+  getProviderInfo
+} from "../utils/command.ts";
+import { loadConfig } from "../utils/config.ts";
+
 export function registerAnalyzeCommand(program: Denomander): void {
-  program
+  const command = program
     .command("analyze")
-    .description("Analyze Datadog monitors and validate provider mappings")
-    .option(
-      "-k, --api-key",
-      "Datadog API key",
-      identity,
-      Deno.env.get("DATADOG_API_KEY"),
-    )
-    .option(
-      "-a, --app-key",
-      "Datadog App key",
-      identity,
-      Deno.env.get("DATADOG_APP_KEY"),
-    )
-    .requiredOption("-c, --config", "Path to config file")
-    .option("-t, --tags", "Filter monitors by tags (comma-separated)")
-    .option("-n, --name", "Filter monitors by name pattern")
-    .option("-m, --message", "Filter monitors by message pattern")
-    .option("--show-monitors", "Show detailed list of monitors")
-    .action(
-      async (options: {
-        "api-key": string;
-        "app-key": string;
-        config: string;
-        tags?: string;
-        name?: string;
-        message?: string;
-        "show-monitors"?: boolean;
-      }) => {
-        const config = loadConfig(options.config);
-        const mappings = config.mappings;
-        const providerSource = config.incidentioConfig.source || "pagerduty";
-        const providerName = providerSource === "opsgenie"
-          ? "Opsgenie"
-          : "PagerDuty";
-        try {
-          const datadogService = new DatadogService({
-            apiKey: options["api-key"],
-            appKey: options["app-key"],
-          });
+    .description("Analyze Datadog monitors and validate provider mappings");
 
-          const spinner = ora("Connecting to Datadog API").start();
-          let monitors: DatadogMonitor[];
+  // Add standard options
+  setupAuthOptions(command);
+  setupFilterOptions(command);
+  
+  // Add required config option
+  command.requiredOption(
+    CommandOptions.config.flag,
+    CommandOptions.config.description
+  );
+  
+  // Add analyze-specific options
+  command.option(
+    CommandOptions.showMonitors.flag,
+    CommandOptions.showMonitors.description
+  );
+  
+  // Set command action
+  command.action(
+    withErrorHandling(async (options: AnalyzeCommandOptions) => {
+      // Load config for provider info
+      const config = loadConfig(options.config);
+      const mappings = config.mappings;
+      
+      // Get provider information
+      const { source: providerSource, displayName: providerName } = getProviderInfo(config);
+      
+      // Create Datadog service
+      const datadogService = createDatadogService(options);
+      const spinner = createSpinner();
+      
+      let monitors: DatadogMonitor[];
 
-          try {
-            monitors = await datadogService.getMonitors();
-            spinner.succeed("Connected to Datadog API");
-          } catch (error) {
-            spinner.fail("Failed to connect to Datadog API");
-            console.error(
-              kleur.red(
-                `Error: ${
-                  error instanceof Error ? error.message : String(error)
-                }`,
-              ),
-            );
-            Deno.exit(1);
-          }
+      try {
+        monitors = await datadogService.getMonitors();
+        spinner.succeed("Connected to Datadog API");
+      } catch (error) {
+        spinner.fail("Failed to connect to Datadog API");
+        throw error;
+      }
 
-          // Apply filters if provided
-          const filteredMonitors = filterMonitors(monitors, options);
+      // Apply filters if provided
+      const filteredMonitors = filterMonitors(monitors, options);
 
-          // Analyze the monitors
-          spinner.start("Analyzing monitors");
-          const stats = analyzeMonitors(
-            filteredMonitors,
-            providerSource,
-            providerName,
-          );
-          spinner.succeed("Analysis complete");
+      // Analyze the monitors
+      spinner.start("Analyzing monitors");
+      const stats = analyzeMonitors(
+        filteredMonitors,
+        providerSource,
+        providerName,
+      );
+      spinner.succeed("Analysis complete");
 
-          // Display the stats
-          displayStats(stats, filteredMonitors.length);
+      // Display the stats
+      displayStats(stats, filteredMonitors.length);
 
-          // Display mapping validation
-          validateMappings(stats, mappings);
+      // Display mapping validation
+      validateMappings(stats, mappings);
 
-          // Show detailed monitor list if requested
-          if (options["show-monitors"]) {
-            displayMonitorDetails(
-              filteredMonitors,
-              providerSource,
-              providerName,
-            );
-          }
-
-          Deno.exit(0);
-        } catch (error) {
-          console.error(
-            kleur.red(
-              `\nError: ${
-                error instanceof Error ? error.message : String(error)
-              }`,
-            ),
-          );
-          Deno.exit(1);
-        }
-      },
-    );
+      // Show detailed monitor list if requested
+      if (options["show-monitors"]) {
+        displayMonitorDetails(
+          filteredMonitors,
+          providerSource,
+          providerName,
+        );
+      }
+    })
+  );
 }
 
 /**
