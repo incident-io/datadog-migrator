@@ -4,11 +4,13 @@ import Denomander from "https://deno.land/x/denomander@0.9.3/src/Denomander.ts";
 
 import { MigrationType } from "../types/index.ts";
 import { prepareFilterOptions } from "../types/prepareFilterOptions.ts";
+// Updated import to use shared utility
 import { MigrationCommandOptions } from "../types/cli.ts";
 import { 
   CommandOptions,
   createDatadogService, 
   createMigrationService,
+  getProviderInfo,
   setupAuthOptions,
   setupFilterOptions,
   setupExecutionOptions,
@@ -17,10 +19,10 @@ import {
   displayMigrationResults
 } from "../utils/command.ts";
 
-export function registerRemoveIncidentioCommand(program: Denomander): void {
+export function registerRemoveProviderCommand(program: Denomander): void {
   const command = program
-    .command("remove-incidentio")
-    .description("Remove incident.io webhooks from monitors");
+    .command("remove-provider")
+    .description("Remove PagerDuty or Opsgenie service mentions from monitors");
 
   // Add standard options
   setupAuthOptions(command);
@@ -41,47 +43,56 @@ export function registerRemoveIncidentioCommand(program: Denomander): void {
 
       // Create migration service and load config
       const dryRunMode = options["dry-run"] === true;
-      const { migrationService } = createMigrationService(
+      const { migrationService, config } = createMigrationService(
         datadogService,
         options.config,
         dryRunMode
       );
       
-      const spinner = createSpinner();
+      // Get provider information
+      const { displayName } = getProviderInfo(config);
 
-      // Confirm action if not in dry run mode
+      // Confirm action with stronger verification if not in dry run mode
       if (!dryRunMode) {
-        spinner.stop();
+        console.log(kleur.yellow("\n⚠️  WARNING: This is a destructive operation ⚠️"));
+        console.log(kleur.yellow(`This will remove all ${displayName} service mentions from your monitors.`));
+        console.log(kleur.yellow("This action cannot be automatically undone.\n"));
         
-        const { confirmed } = await inquirer.prompt([
+        const { confirmText } = await inquirer.prompt([
           {
-            type: "confirm",
-            name: "confirmed",
-            message: "This will remove all incident.io webhooks from monitors. Continue?",
-            default: false,
+            type: "input",
+            name: "confirmText",
+            message: "Type CONFIRM to proceed:",
+            validate: (input: string) =>
+              input === "CONFIRM" ? 
+                true : 
+                "You must type CONFIRM (all uppercase) to continue"
           },
         ]);
 
-        if (!confirmed) {
+        if (confirmText !== "CONFIRM") {
           console.log(kleur.yellow("Operation cancelled."));
           Deno.exit(0);
         }
         
-        spinner.start("Connecting to Datadog API");
+        console.log(kleur.green(`Confirmation received. Proceeding with ${displayName} removal...`));
       }
 
+      // Create spinner and start migration process
+      const spinner = createSpinner();
+      
       // Update spinner message
       spinner.start(
         dryRunMode
           ? "Simulating removal..."
-          : "Removing incident.io webhooks..."
+          : `Removing ${displayName} service mentions...`
       );
 
       // Prepare filter options if specified
       const filterOptions = prepareFilterOptions(options);
 
       const result = await migrationService.migrateMonitors({
-        type: MigrationType.REMOVE_INCIDENTIO_WEBHOOK,
+        type: MigrationType.REMOVE_PROVIDER,
         dryRun: dryRunMode,
         verbose: options.verbose,
         filter: filterOptions,

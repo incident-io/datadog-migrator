@@ -1,99 +1,94 @@
 import kleur from "kleur";
-import ora from "ora";
 import boxen from "boxen";
-
-import { DatadogService } from "../services/datadog.ts";
-import { loadConfig } from "../utils/config.ts";
-import { DatadogMonitor, MigrationMapping } from "../types/index.ts";
-import { PAGERDUTY_SERVICE_REGEX } from "../utils/regex.ts";
 import Denomander from "https://deno.land/x/denomander@0.9.3/src/Denomander.ts";
 
-const identity = (i: string) => i;
+import { DatadogMonitor, MigrationMapping } from "../types/index.ts";
+import { getServiceRegexForProvider } from "../utils/regex.ts";
+import { AnalyzeCommandOptions } from "../types/cli.ts";
+import { 
+  CommandOptions,
+  createDatadogService,
+  setupAuthOptions,
+  setupFilterOptions,
+  createSpinner,
+  withErrorHandling,
+  getProviderInfo
+} from "../utils/command.ts";
+import { loadConfig } from "../utils/config.ts";
+
 export function registerAnalyzeCommand(program: Denomander): void {
-  program
+  const command = program
     .command("analyze")
-    .description("Analyze Datadog monitors and validate configuration")
-    .option(
-      "-k, --api-key",
-      "Datadog API key",
-      identity,
-      Deno.env.get("DATADOG_API_KEY"),
-    )
-    .option(
-      "-a, --app-key",
-      "Datadog App key",
-      identity,
-      Deno.env.get("DATADOG_APP_KEY"),
-    )
-    .requiredOption("-c, --config", "Path to config file")
-    .option("-t, --tags", "Filter monitors by tags (comma-separated)")
-    .option("-n, --name", "Filter monitors by name pattern")
-    .option("-m, --message", "Filter monitors by message pattern")
-    .option("--show-monitors", "Show detailed list of monitors")
-    .action(
-      async (options: {
-        'api-key': string;
-        'app-key': string;
-        config: string;
-        tags?: string;
-        name?: string;
-        message?: string;
-        'show-monitors'?: boolean;
-      }) => {
-        const config = loadConfig(options.config);
-        const mappings = config.mappings;
-        try {
-          const datadogService = new DatadogService({
-            apiKey: options["api-key"],
-            appKey: options["app-key"],
-          });
+    .description("Analyze Datadog monitors and validate provider mappings");
 
-          const spinner = ora("Connecting to Datadog API").start();
-          let monitors: DatadogMonitor[];
+  // Add standard options
+  setupAuthOptions(command);
+  setupFilterOptions(command);
+  
+  // Add required config option
+  command.requiredOption(
+    CommandOptions.config.flag,
+    CommandOptions.config.description
+  );
+  
+  // Add analyze-specific options
+  command.option(
+    CommandOptions.showMonitors.flag,
+    CommandOptions.showMonitors.description
+  );
+  
+  // Set command action
+  command.action(
+    withErrorHandling(async (options: AnalyzeCommandOptions) => {
+      // Load config for provider info
+      const config = loadConfig(options.config);
+      const mappings = config.mappings;
+      
+      // Get provider information
+      const { source: providerSource, displayName: providerName } = getProviderInfo(config);
+      
+      // Create Datadog service
+      const datadogService = createDatadogService(options);
+      const spinner = createSpinner();
+      
+      let monitors: DatadogMonitor[];
 
-          try {
-            monitors = await datadogService.getMonitors();
-            spinner.succeed("Connected to Datadog API");
-          } catch (error) {
-            spinner.fail("Failed to connect to Datadog API");
-            console.error(
-              kleur.red(
-                `Error: ${error instanceof Error ? error.message : String(error)}`,
-              ),
-            );
-            Deno.exit(1);
-          }
+      try {
+        monitors = await datadogService.getMonitors();
+        spinner.succeed("Connected to Datadog API");
+      } catch (error) {
+        spinner.fail("Failed to connect to Datadog API");
+        throw error;
+      }
 
-          // Apply filters if provided
-          const filteredMonitors = filterMonitors(monitors, options);
+      // Apply filters if provided
+      const filteredMonitors = filterMonitors(monitors, options);
 
-          // Analyze the monitors
-          spinner.start("Analyzing monitors");
-          const stats = analyzeMonitors(filteredMonitors);
-          spinner.succeed("Analysis complete");
+      // Analyze the monitors
+      spinner.start("Analyzing monitors");
+      const stats = analyzeMonitors(
+        filteredMonitors,
+        providerSource,
+        providerName,
+      );
+      spinner.succeed("Analysis complete");
 
-          // Display the stats
-          displayStats(stats, filteredMonitors.length);
+      // Display the stats
+      displayStats(stats, filteredMonitors.length);
 
-          // Display mapping validation
-          validateMappings(stats, mappings);
+      // Display mapping validation
+      validateMappings(stats, mappings);
 
-          // Show detailed monitor list if requested
-          if (options["show-monitors"]) {
-            displayMonitorDetails(filteredMonitors);
-          }
-
-          Deno.exit(0);
-        } catch (error) {
-          console.error(
-            kleur.red(
-              `\nError: ${error instanceof Error ? error.message : String(error)}`,
-            ),
-          );
-          Deno.exit(1);
-        }
-      },
-    );
+      // Show detailed monitor list if requested
+      if (options["show-monitors"]) {
+        displayMonitorDetails(
+          filteredMonitors,
+          providerSource,
+          providerName,
+        );
+      }
+    })
+  );
 }
 
 /**
@@ -113,7 +108,7 @@ function filterMonitors(
   if (options.tags) {
     const tags = options.tags.split(",").map((t: string) => t.trim());
     filtered = filtered.filter((monitor) =>
-      tags.some((tag) => monitor.tags.includes(tag)),
+      tags.some((tag) => monitor.tags.includes(tag))
     );
   }
 
@@ -127,7 +122,7 @@ function filterMonitors(
   if (options.message) {
     const messagePattern = new RegExp(options.message, "i");
     filtered = filtered.filter((monitor) =>
-      messagePattern.test(monitor.message),
+      messagePattern.test(monitor.message)
     );
   }
 
@@ -136,7 +131,9 @@ function filterMonitors(
 
 interface MonitorStats {
   total: number;
-  pagerduty: {
+  provider: {
+    name: string; // "pagerduty" or "opsgenie"
+    displayName: string; // "PagerDuty" or "Opsgenie"
     count: number;
     services: { [service: string]: number };
   };
@@ -144,19 +141,25 @@ interface MonitorStats {
     count: number;
     webhooks: { [webhook: string]: number };
   };
-  // Monitors with both PD and incident.io
+  // Monitors with both provider and incident.io
   both: number;
-  // Monitors with neither PD nor incident.io
+  // Monitors with neither provider nor incident.io
   neither: number;
 }
 
 /**
  * Analyze monitors to get statistics
  */
-function analyzeMonitors(monitors: DatadogMonitor[]): MonitorStats {
+function analyzeMonitors(
+  monitors: DatadogMonitor[],
+  providerSource: string,
+  providerName: string,
+): MonitorStats {
   const stats: MonitorStats = {
     total: monitors.length,
-    pagerduty: {
+    provider: {
+      name: providerSource,
+      displayName: providerName,
       count: 0,
       services: {},
     },
@@ -171,21 +174,24 @@ function analyzeMonitors(monitors: DatadogMonitor[]): MonitorStats {
   // Incident.io webhook pattern
   const incidentPattern = /@webhook-incident-io(-\S+)?/g;
 
+  // Get the appropriate regex based on the provider
+  const providerRegex = getServiceRegexForProvider(providerSource);
+
   for (const monitor of monitors) {
     const { message } = monitor;
 
-    // Check for PagerDuty mentions
-    const pdMatches = [...message.matchAll(PAGERDUTY_SERVICE_REGEX)];
-    const hasPagerDuty = pdMatches.length > 0;
+    // Check for provider mentions
+    const providerMatches = [...message.matchAll(providerRegex)];
+    const hasProvider = providerMatches.length > 0;
 
-    if (hasPagerDuty) {
-      stats.pagerduty.count++;
+    if (hasProvider) {
+      stats.provider.count++;
 
       // Count each service
-      for (const match of pdMatches) {
+      for (const match of providerMatches) {
         const service = match[1]; // Extract service name
-        stats.pagerduty.services[service] =
-          (stats.pagerduty.services[service] || 0) + 1;
+        stats.provider.services[service] =
+          (stats.provider.services[service] || 0) + 1;
       }
     }
 
@@ -205,9 +211,9 @@ function analyzeMonitors(monitors: DatadogMonitor[]): MonitorStats {
     }
 
     // Count monitors with both or neither
-    if (hasPagerDuty && hasIncidentio) {
+    if (hasProvider && hasIncidentio) {
       stats.both++;
-    } else if (!hasPagerDuty && !hasIncidentio) {
+    } else if (!hasProvider && !hasIncidentio) {
       stats.neither++;
     }
   }
@@ -227,11 +233,21 @@ function displayStats(stats: MonitorStats, totalFiltered: number): void {
   const summary = [
     `${kleur.bold("Monitor Analysis Summary")}`,
     ``,
-    `${kleur.bold("Total Monitors:")} ${stats.total} (${getPercentage(stats.total)} of filtered)`,
-    `${kleur.blue("Using PagerDuty:")} ${stats.pagerduty.count} (${getPercentage(stats.pagerduty.count)})`,
-    `${kleur.green("Using incident.io:")} ${stats.incidentio.count} (${getPercentage(stats.incidentio.count)})`,
-    `${kleur.yellow("Using Both:")} ${stats.both} (${getPercentage(stats.both)})`,
-    `${kleur.gray("Using Neither:")} ${stats.neither} (${getPercentage(stats.neither)})`,
+    `${kleur.bold("Total Monitors:")} ${stats.total} (${
+      getPercentage(stats.total)
+    } of filtered)`,
+    `${
+      kleur.blue(`Using ${stats.provider.displayName}:`)
+    } ${stats.provider.count} (${getPercentage(stats.provider.count)})`,
+    `${kleur.green("Using incident.io:")} ${stats.incidentio.count} (${
+      getPercentage(stats.incidentio.count)
+    })`,
+    `${kleur.yellow("Using Both:")} ${stats.both} (${
+      getPercentage(stats.both)
+    })`,
+    `${kleur.gray("Using Neither:")} ${stats.neither} (${
+      getPercentage(stats.neither)
+    })`,
   ].join("\n");
 
   console.log(
@@ -243,11 +259,11 @@ function displayStats(stats: MonitorStats, totalFiltered: number): void {
     }),
   );
 
-  // Display PagerDuty services
-  if (Object.keys(stats.pagerduty.services).length > 0) {
-    console.log(kleur.bold("\nPagerDuty Services:"));
+  // Display provider services
+  if (Object.keys(stats.provider.services).length > 0) {
+    console.log(kleur.bold(`\n${stats.provider.displayName} Services:`));
 
-    const sortedServices = Object.entries(stats.pagerduty.services).sort(
+    const sortedServices = Object.entries(stats.provider.services).sort(
       (a, b) => b[1] - a[1],
     ); // Sort by count, descending
 
@@ -268,25 +284,31 @@ function displayStats(stats: MonitorStats, totalFiltered: number): void {
 
     for (const [webhook, count] of sortedWebhooks) {
       console.log(
-        `  ${kleur.green(webhook)}: ${count} monitors (${getPercentage(count)})`,
+        `  ${kleur.green(webhook)}: ${count} monitors (${
+          getPercentage(count)
+        })`,
       );
     }
   }
 }
 
 /**
- * Validate mappings against detected PagerDuty services
+ * Validate mappings against detected provider services
  */
 function validateMappings(
   stats: MonitorStats,
   mappings: MigrationMapping[],
 ): void {
-  const services = Object.keys(stats.pagerduty.services);
+  const providerSource = stats.provider.name;
+  const providerName = stats.provider.displayName;
+  const services = Object.keys(stats.provider.services);
 
   // Create a map of services to their team mappings
   const mappingsMap = new Map();
   for (const mapping of mappings) {
-    if (mapping.pagerdutyService) {
+    if (providerSource === "opsgenie" && mapping.opsgenieService) {
+      mappingsMap.set(mapping.opsgenieService, mapping.incidentioTeam);
+    } else if (mapping.pagerdutyService) {
       mappingsMap.set(mapping.pagerdutyService, mapping.incidentioTeam);
     }
   }
@@ -303,18 +325,18 @@ function validateMappings(
 
   if (unmappedServices.length === 0 && nullMappings.length === 0) {
     console.log(
-      kleur.green("  ✓ All PagerDuty services have complete mappings"),
+      kleur.green(`  ✓ All ${providerName} services have complete mappings`),
     );
   } else {
     // Show unmapped services
     if (unmappedServices.length > 0) {
       console.log(
         kleur.red(
-          `  ✗ ${unmappedServices.length} PagerDuty services lack mappings:`,
+          `  ✗ ${unmappedServices.length} ${providerName} services lack mappings:`,
         ),
       );
       unmappedServices.forEach((service) => {
-        const count = stats.pagerduty.services[service];
+        const count = stats.provider.services[service];
         console.log(kleur.red(`    - ${service} (used in ${count} monitors)`));
       });
     }
@@ -323,11 +345,11 @@ function validateMappings(
     if (nullMappings.length > 0) {
       console.log(
         kleur.yellow(
-          `  ! ${nullMappings.length} PagerDuty services are found in the config but don't have teams assigned:`,
+          `  ! ${nullMappings.length} ${providerName} services are found in the config but don't have teams assigned:`,
         ),
       );
       nullMappings.forEach((service) => {
-        const count = stats.pagerduty.services[service];
+        const count = stats.provider.services[service];
         console.log(
           kleur.yellow(`    - ${service} (used in ${count} monitors)`),
         );
@@ -340,10 +362,17 @@ function validateMappings(
 
       // Generate example mapping config for unmapped services
       const exampleMappings = unmappedServices.map((service) => {
-        return {
-          pagerdutyService: service,
-          incidentioTeam: null,
-        };
+        if (providerSource === "opsgenie") {
+          return {
+            opsgenieService: service,
+            incidentioTeam: null,
+          };
+        } else {
+          return {
+            pagerdutyService: service,
+            incidentioTeam: null,
+          };
+        }
       });
 
       console.log(`
@@ -368,7 +397,11 @@ ${JSON.stringify(exampleMappings, null, 2)}
 /**
  * Display detailed information about monitors
  */
-function displayMonitorDetails(monitors: DatadogMonitor[]): void {
+function displayMonitorDetails(
+  monitors: DatadogMonitor[],
+  providerSource: string,
+  providerName: string,
+): void {
   console.log(kleur.bold("\nMonitor Details:"));
 
   // Display each monitor's tags first
@@ -376,45 +409,50 @@ function displayMonitorDetails(monitors: DatadogMonitor[]): void {
   monitors.forEach((monitor) => {
     console.log(`  ${kleur.bold(`#${monitor.id}`)}: ${monitor.name}`);
     console.log(
-      `    Tags: ${monitor.tags.length > 0 ? monitor.tags.join(", ") : "No tags"}`,
+      `    Tags: ${
+        monitor.tags.length > 0 ? monitor.tags.join(", ") : "No tags"
+      }`,
     );
   });
 
+  // Get the appropriate regex based on provider
+  const providerRegex = getServiceRegexForProvider(providerSource);
+
   // Group monitors by their notification configuration
-  const pdOnly = monitors.filter((monitor) => {
+  const providerOnly = monitors.filter((monitor) => {
     return (
-      monitor.message.match(PAGERDUTY_SERVICE_REGEX) &&
+      monitor.message.match(providerRegex) &&
       !monitor.message.match(/@webhook-incident-io(-\S+)?/g)
     );
   });
 
   const incidentOnly = monitors.filter((monitor) => {
     return (
-      !monitor.message.match(PAGERDUTY_SERVICE_REGEX) &&
+      !monitor.message.match(providerRegex) &&
       monitor.message.match(/@webhook-incident-io(-\S+)?/g)
     );
   });
 
   const both = monitors.filter((monitor) => {
     return (
-      monitor.message.match(PAGERDUTY_SERVICE_REGEX) &&
+      monitor.message.match(providerRegex) &&
       monitor.message.match(/@webhook-incident-io(-\S+)?/g)
     );
   });
 
   const neither = monitors.filter((monitor) => {
     return (
-      !monitor.message.match(PAGERDUTY_SERVICE_REGEX) &&
+      !monitor.message.match(providerRegex) &&
       !monitor.message.match(/@webhook-incident-io(-\S+)?/g)
     );
   });
 
   // Display each group
-  if (pdOnly.length > 0) {
-    console.log(kleur.blue("\nMonitors using PagerDuty only:"));
-    pdOnly.forEach((monitor) => {
+  if (providerOnly.length > 0) {
+    console.log(kleur.blue(`\nMonitors using ${providerName} only:`));
+    providerOnly.forEach((monitor) => {
       console.log(`  ${kleur.bold(`#${monitor.id}`)}: ${monitor.name}`);
-      console.log(`    ${extractMentions(monitor.message)}`);
+      console.log(`    ${extractMentions(monitor.message, providerRegex)}`);
     });
   }
 
@@ -422,23 +460,23 @@ function displayMonitorDetails(monitors: DatadogMonitor[]): void {
     console.log(kleur.green("\nMonitors using incident.io only:"));
     incidentOnly.forEach((monitor) => {
       console.log(`  ${kleur.bold(`#${monitor.id}`)}: ${monitor.name}`);
-      console.log(`    ${extractMentions(monitor.message)}`);
+      console.log(`    ${extractMentions(monitor.message, providerRegex)}`);
     });
   }
 
   if (both.length > 0) {
     console.log(
-      kleur.yellow("\nMonitors using both PagerDuty and incident.io:"),
+      kleur.yellow(`\nMonitors using both ${providerName} and incident.io:`),
     );
     both.forEach((monitor) => {
       console.log(`  ${kleur.bold(`#${monitor.id}`)}: ${monitor.name}`);
-      console.log(`    ${extractMentions(monitor.message)}`);
+      console.log(`    ${extractMentions(monitor.message, providerRegex)}`);
     });
   }
 
   if (neither.length > 0) {
     console.log(
-      kleur.gray("\nMonitors using neither PagerDuty nor incident.io:"),
+      kleur.gray(`\nMonitors using neither ${providerName} nor incident.io:`),
     );
     neither.forEach((monitor) => {
       console.log(`  ${kleur.bold(`#${monitor.id}`)}: ${monitor.name}`);
@@ -449,12 +487,12 @@ function displayMonitorDetails(monitors: DatadogMonitor[]): void {
 /**
  * Extract and highlight mentions in a message
  */
-function extractMentions(message: string): string {
+function extractMentions(message: string, providerRegex: RegExp): string {
   let result = message;
 
-  // Highlight PagerDuty mentions
+  // Highlight provider mentions
   result = result.replace(
-    PAGERDUTY_SERVICE_REGEX,
+    providerRegex,
     (match) => `${kleur.blue(match)}`,
   );
 

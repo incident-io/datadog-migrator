@@ -145,5 +145,6 @@ dist
 
 # User-specific configuration files
 config.json
+test-config.json
 
 **/.claude/settings.local.json

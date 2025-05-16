@@ -14,16 +14,18 @@ export function prepareFilterOptions(options: {
 
   const filterOptions: FilterOptions = {};
 
+  // Convert comma-separated tags to array
   if (options.tags) {
     filterOptions.tags = options.tags.split(",").map((t: string) => t.trim());
   }
 
+  // Pass name and message directly
   if (options.name) {
-    filterOptions.namePattern = new RegExp(options.name, "i");
+    filterOptions.name = options.name;
   }
 
   if (options.message) {
-    filterOptions.messagePattern = new RegExp(options.message, "i");
+    filterOptions.message = options.message;
   }
 
   return filterOptions;
