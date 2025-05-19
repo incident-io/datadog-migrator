@@ -1,20 +1,19 @@
 /**
  * Utilities for CLI command setup and execution
  */
-
+import ora, { Ora } from "ora";
+import { MigrationResult, MigrationService } from "../services/migration.ts";
+import { formatMessageDiff } from "./diff.ts";
 import Denomander from "https://deno.land/x/denomander@0.9.3/src/Denomander.ts";
 import kleur from "kleur";
-import ora from "ora";
 
 import { DatadogService } from "../services/datadog.ts";
-import { MigrationService } from "../services/migration.ts";
 import { loadConfig } from "./config.ts";
-import { identity } from "../types/cli.ts";
-import { CommandOptions } from "../types/cli.ts";
+import { CommandOptions, identity } from "../types/cli.ts";
+import { MigrationConfig } from "../types/index.ts";
 
 // Re-export CommandOptions to make it available to command files
 export { CommandOptions };
-import { MigrationConfig } from "../types/index.ts";
 
 /**
  * Create a DatadogService instance from command options
@@ -35,7 +34,7 @@ export function createDatadogService(options: {
 export function createMigrationService(
   datadogService: DatadogService,
   configPath: string,
-  dryRun: boolean = false
+  dryRun: boolean = false,
 ): { migrationService: MigrationService; config: MigrationConfig } {
   // Load config
   const config = loadConfig(configPath);
@@ -47,7 +46,7 @@ export function createMigrationService(
     datadogService,
     incidentioConfig,
     mappings,
-    { dryRun }
+    { dryRun },
   );
 
   return { migrationService, config };
@@ -56,23 +55,13 @@ export function createMigrationService(
 /**
  * Get provider information from config (standardized function)
  */
-export function getProviderInfo(config: MigrationConfig): { source: string; displayName: string } {
+export function getProviderInfo(
+  config: MigrationConfig,
+): { source: string; displayName: string } {
   const source = config.incidentioConfig.source || "pagerduty";
   const displayName = source === "opsgenie" ? "Opsgenie" : "PagerDuty";
-  
-  return { source, displayName };
-}
 
-/**
- * Handle command error and exit process
- */
-export function handleCommandError(error: unknown): never {
-  console.error(
-    kleur.red(
-      `\nError: ${error instanceof Error ? error.message : String(error)}`
-    )
-  );
-  Deno.exit(1);
+  return { source, displayName };
 }
 
 /**
@@ -84,13 +73,13 @@ export function setupAuthOptions(command: Denomander): Denomander {
       CommandOptions.apiKey.flag,
       CommandOptions.apiKey.description,
       identity,
-      Deno.env.get(CommandOptions.apiKey.defaultEnv)
+      Deno.env.get(CommandOptions.apiKey.defaultEnv),
     )
     .option(
       CommandOptions.appKey.flag,
       CommandOptions.appKey.description,
       identity,
-      Deno.env.get(CommandOptions.appKey.defaultEnv)
+      Deno.env.get(CommandOptions.appKey.defaultEnv),
     );
 }
 
@@ -101,15 +90,15 @@ export function setupFilterOptions(command: Denomander): Denomander {
   return command
     .option(
       CommandOptions.tags.flag,
-      CommandOptions.tags.description
+      CommandOptions.tags.description,
     )
     .option(
       CommandOptions.name.flag,
-      CommandOptions.name.description
+      CommandOptions.name.description,
     )
     .option(
       CommandOptions.message.flag,
-      CommandOptions.message.description
+      CommandOptions.message.description,
     );
 }
 
@@ -120,13 +109,13 @@ export function setupExecutionOptions(command: Denomander): Denomander {
   return command
     .option(
       CommandOptions.dryRun.flag,
-      CommandOptions.dryRun.description
+      CommandOptions.dryRun.description,
     )
     .option(
       CommandOptions.verbose.flag,
       CommandOptions.verbose.description,
       identity,
-      CommandOptions.verbose.defaultValue
+      CommandOptions.verbose.defaultValue,
     );
 }
 
@@ -141,50 +130,22 @@ export function createSpinner(message: string = "Connecting to Datadog API") {
  * Standard command callback wrapper to handle errors
  */
 export function withErrorHandling<T>(
-  callback: (options: T) => Promise<void>
+  callback: (options: T) => Promise<void>,
 ) {
   return async (options: T): Promise<void> => {
     try {
       await callback(options);
       Deno.exit(0);
     } catch (error) {
-      handleCommandError(error);
+      console.error(
+        kleur.red(
+          `\nError: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+      );
+      Deno.exit(1);
     }
   };
 }
-
-/**
- * Get spinner text based on operation type and dry run mode
- */
-export function getSpinnerText(
-  operation: string,
-  dryRun: boolean,
-  provider?: string
-): string {
-  const providerText = provider ? ` ${provider}` : "";
-  
-  if (dryRun) {
-    return `Simulating ${operation}...`;
-  }
-  
-  switch (operation) {
-    case "add":
-      return "Adding incident.io webhooks...";
-    case "remove-provider":
-      return `Removing${providerText} service mentions...`;
-    case "remove-incidentio":
-      return "Removing incident.io webhooks...";
-    default:
-      return "Processing monitors...";
-  }
-}
-
-/**
- * Display the results of a migration operation
- */
-import { Ora } from "ora";
-import { MigrationResult } from "../services/migration.ts";
-import { formatMessageDiff } from "./diff.ts";
 
 export const displayMigrationResults = (
   spinner: Ora,
@@ -219,11 +180,19 @@ export const displayMigrationResults = (
         if (change.before !== change.after) {
           console.log(kleur.yellow("Before:"));
           console.log(
-            `  ${type === "add" ? change.before : formatMessageDiff(change.before, change.after, type)}`,
+            `  ${
+              type === "add"
+                ? change.before
+                : formatMessageDiff(change.before, change.after, type)
+            }`,
           );
           console.log(kleur.green("After:"));
           console.log(
-            `  ${type === "add" ? formatMessageDiff(change.before, change.after, type) : change.after}`,
+            `  ${
+              type === "add"
+                ? formatMessageDiff(change.before, change.after, type)
+                : change.after
+            }`,
           );
         }
 

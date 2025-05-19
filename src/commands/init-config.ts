@@ -241,9 +241,14 @@ export function registerInitConfigCommand(program: Denomander): void {
             defaultConfig.incidentioConfig.webhookToken = cleanToken;
           }
 
+          const providerName = provider === "opsgenie"
+            ? "Opsgenie"
+            : "PagerDuty";
+
           console.log(
             kleur.blue(
-              "\nWe'll scan for PagerDuty services and add them to your config file.",
+              `
+We'll scan for ${providerName} services and add them to your config file.`,
             ),
           );
           console.log(
@@ -254,10 +259,6 @@ export function registerInitConfigCommand(program: Denomander): void {
 
           // Write the config file
           const spinner = ora("Creating configuration file").start();
-
-          const providerName = provider === "opsgenie"
-            ? "Opsgenie"
-            : "PagerDuty";
 
           try {
             const dirPath = path.dirname(configPath);
@@ -273,7 +274,7 @@ export function registerInitConfigCommand(program: Denomander): void {
             spinner.succeed(`Configuration file created at ${options.path}`);
 
             // Now detect PagerDuty services automatically
-            spinner.start("Detecting PagerDuty services from monitors");
+            spinner.start(`Detecting ${providerName} services from monitors`);
 
             try {
               const datadogService = new DatadogService({
@@ -315,40 +316,25 @@ export function registerInitConfigCommand(program: Denomander): void {
 
                 for (const service of detectedServices) {
                   if (!existingServices.has(service)) {
-                    if (provider === "opsgenie") {
-                      // Add an example of additionalMetadata for the first service
-                      if (newMappings.length === 0) {
-                        defaultConfig.mappings.push({
-                          opsgenieService: service,
-                          incidentioTeam: null, // Placeholder for user to fill in
-                          additionalMetadata: {
-                            // Example metadata - useful for differentiating similar services
-                            "service": service,
-                          },
-                        });
-                      } else {
-                        defaultConfig.mappings.push({
-                          opsgenieService: service,
-                          incidentioTeam: null, // Placeholder for user to fill in
-                        });
-                      }
+                    const mappingKey = provider === "opsgenie"
+                      ? "opsgenieService"
+                      : "pagerdutyService";
+
+                     // Add an example of additionalMetadata for the first service
+                    if (newMappings.length === 0) {
+                      defaultConfig.mappings.push({
+                        [mappingKey]: service,
+                        incidentioTeam: null, // Placeholder for user to fill in
+                        additionalMetadata: {
+                          // Example metadata - useful for differentiating similar services
+                          "service": service,
+                        },
+                      });
                     } else {
-                      // Add an example of additionalMetadata for the first service
-                      if (newMappings.length === 0) {
-                        defaultConfig.mappings.push({
-                          pagerdutyService: service,
-                          incidentioTeam: null, // Placeholder for user to fill in
-                          additionalMetadata: {
-                            // Example metadata - useful for differentiating similar services
-                            "service": service,
-                          },
-                        });
-                      } else {
-                        defaultConfig.mappings.push({
-                          pagerdutyService: service,
-                          incidentioTeam: null, // Placeholder for user to fill in
-                        });
-                      }
+                      defaultConfig.mappings.push({
+                        [mappingKey]: service,
+                        incidentioTeam: null, // Placeholder for user to fill in
+                      });
                     }
                     newMappings.push(service);
                   }
