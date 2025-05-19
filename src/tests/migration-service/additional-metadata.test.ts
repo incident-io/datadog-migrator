@@ -32,18 +32,7 @@ Deno.test("additionalMetadata - single webhook mode adds metadata as tags", asyn
   mockDatadogService.setMonitors([monitor]);
   
   // ACT & ASSERT
-  await testAdditionalMetadata(
-    mockDatadogService,
-    config,
-    mappings,
-    monitor,
-    // Expected tags (original + team tag + additionalMetadata tags)
-    ["env:prod", "team:api-team", "priority:high", "service:api"],
-    // No specific webhook name to check (using default webhook)
-    null,
-    // No webhook payload assertions needed for single webhook mode
-    null
-  );
+  await testAdditionalMetadata(mockDatadogService, config, mappings, ["env:prod", "team:api-team", "priority:high", "service:api"], null, null);
 });
 
 Deno.test("additionalMetadata - team webhook mode passes metadata to webhook payload", async () => {
@@ -69,18 +58,7 @@ Deno.test("additionalMetadata - team webhook mode passes metadata to webhook pay
   mockDatadogService.setMonitors([monitor]);
   
   // ACT & ASSERT
-  await testAdditionalMetadata(
-    mockDatadogService,
-    config,
-    mappings,
-    monitor,
-    // No tags expected in team webhook mode
-    undefined,
-    // Expected webhook name
-    "incident-io-api-team",
-    // Expected webhook payload contents
-    ['"priority": "high"', '"service": "api"', '"team": "api-team"']
-  );
+  await testAdditionalMetadata(mockDatadogService, config, mappings, undefined, "incident-io-api-team", ["\"priority\": \"high\"", "\"service\": \"api\"", "\"team\": \"api-team\""]);
 });
 
 Deno.test("additionalMetadata - works with Opsgenie services too", async () => {
@@ -106,16 +84,5 @@ Deno.test("additionalMetadata - works with Opsgenie services too", async () => {
   mockDatadogService.setMonitors([monitor]);
   
   // ACT & ASSERT
-  await testAdditionalMetadata(
-    mockDatadogService,
-    config,
-    mappings,
-    monitor,
-    // Expected tags (original + team tag + additionalMetadata tags)
-    ["env:prod", "team:api-team", "priority:high", "service:api"],
-    // No specific webhook name to check (using default webhook)
-    null,
-    // No webhook payload assertions needed for single webhook mode
-    null
-  );
+  await testAdditionalMetadata(mockDatadogService, config, mappings, ["env:prod", "team:api-team", "priority:high", "service:api"], null, null);
 });

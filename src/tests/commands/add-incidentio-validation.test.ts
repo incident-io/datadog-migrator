@@ -1,6 +1,6 @@
 /**
  * Tests for add-incidentio command validation behavior
- * 
+ *
  * These tests verify that the command properly validates service mappings
  * before executing the migration. The validation ensures:
  * 1. All provider services must have mappings
@@ -12,7 +12,7 @@ import { MigrationService } from "../../services/migration.ts";
 import type { DatadogService } from "../../services/datadog.ts";
 import { MigrationType } from "../../types/index.ts";
 import { MockDatadogService } from "../utils/mock-datadog-service.ts";
-import { createPagerDutyMonitor, createOpsgenieMonitor, createTestConfig, createTestMappings } from "../utils/test-utils.ts";
+import { createOpsgenieMonitor, createPagerDutyMonitor, createTestConfig } from "../utils/test-utils.ts";
 import { withMockedEnv } from "../utils/test-stub.ts";
 
 /**
@@ -25,20 +25,20 @@ Deno.test("add-incidentio - detects and rejects unmapped PagerDuty services", as
   await withMockedEnv(async () => {
     // Create and configure mock service with an unmapped service
     const mockDatadogService = new MockDatadogService();
-    
+
     // Set up monitors with various configurations including an unmapped service
     mockDatadogService.monitors = [
       createPagerDutyMonitor("api-critical", { id: 1, tags: ["env:prod"] }),
       createPagerDutyMonitor("database", { id: 2, tags: ["env:prod"] }),
-      createPagerDutyMonitor("unmapped-service", { id: 3, tags: ["env:prod"] }) // This service has no mapping
+      createPagerDutyMonitor("unmapped-service", { id: 3, tags: ["env:prod"] }), // This service has no mapping
     ];
-    
+
     // Create test config with only two of the services mapped
     const config = {
       incidentioConfig: createTestConfig({
         webhookPerTeam: false,
         addTeamTags: true,
-        source: "pagerduty"
+        source: "pagerduty",
       }),
       // Only map api-critical and database, leave unmapped-service unmapped
       mappings: [
@@ -47,39 +47,39 @@ Deno.test("add-incidentio - detects and rejects unmapped PagerDuty services", as
           incidentioTeam: "api-team",
           additionalMetadata: {
             priority: "high",
-            service: "api"
-          }
+            service: "api",
+          },
         },
         {
           pagerdutyService: "database",
           incidentioTeam: "platform-team",
           additionalMetadata: {
             priority: "high",
-            service: "database"
-          }
-        }
-      ]
+            service: "database",
+          },
+        },
+      ],
     };
-    
+
     // Create migration service
     const migrationService = new MigrationService(
       mockDatadogService as unknown as DatadogService,
       config.incidentioConfig,
       config.mappings,
-      { dryRun: false }
+      { dryRun: false },
     );
-    
+
     // Act - attempt to run the migration, expect it to throw
     await assertRejects(
       async () => {
         await migrationService.migrateMonitors({
           type: MigrationType.ADD_INCIDENTIO_WEBHOOK,
-          dryRun: false
+          dryRun: false,
         });
       },
       Error,
       "Missing mappings for PagerDuty services: unmapped-service",
-      "Should throw an error for unmapped services"
+      "Should throw an error for unmapped services",
     );
   });
 });
@@ -94,20 +94,20 @@ Deno.test("add-incidentio - detects and rejects unmapped Opsgenie services", asy
   await withMockedEnv(async () => {
     // Create and configure mock service with an unmapped service
     const mockDatadogService = new MockDatadogService();
-    
+
     // Set up monitors with various configurations including an unmapped service
     mockDatadogService.monitors = [
       createOpsgenieMonitor("api-critical", { id: 1, tags: ["env:prod"] }),
       createOpsgenieMonitor("database", { id: 2, tags: ["env:prod"] }),
-      createOpsgenieMonitor("unmapped-service", { id: 3, tags: ["env:prod"] }) // This service has no mapping
+      createOpsgenieMonitor("unmapped-service", { id: 3, tags: ["env:prod"] }), // This service has no mapping
     ];
-    
+
     // Create test config with only two of the services mapped
     const config = {
       incidentioConfig: createTestConfig({
         webhookPerTeam: false,
         addTeamTags: true,
-        source: "opsgenie" // Using Opsgenie as the source
+        source: "opsgenie", // Using Opsgenie as the source
       }),
       // Only map api-critical and database, leave unmapped-service unmapped
       mappings: [
@@ -116,39 +116,39 @@ Deno.test("add-incidentio - detects and rejects unmapped Opsgenie services", asy
           incidentioTeam: "api-team",
           additionalMetadata: {
             priority: "high",
-            service: "api"
-          }
+            service: "api",
+          },
         },
         {
           opsgenieService: "database", // Note: opsgenieService instead of pagerdutyService
           incidentioTeam: "platform-team",
           additionalMetadata: {
             priority: "high",
-            service: "database"
-          }
-        }
-      ]
+            service: "database",
+          },
+        },
+      ],
     };
-    
+
     // Create migration service
     const migrationService = new MigrationService(
       mockDatadogService as unknown as DatadogService,
       config.incidentioConfig,
       config.mappings,
-      { dryRun: false }
+      { dryRun: false },
     );
-    
+
     // Act - attempt to run the migration, expect it to throw
     await assertRejects(
       async () => {
         await migrationService.migrateMonitors({
           type: MigrationType.ADD_INCIDENTIO_WEBHOOK,
-          dryRun: false
+          dryRun: false,
         });
       },
       Error,
       "Missing mappings for Opsgenie services: unmapped-service",
-      "Should throw an error for unmapped services"
+      "Should throw an error for unmapped services",
     );
   });
 });
@@ -163,19 +163,19 @@ Deno.test("add-incidentio - does not reject unmapped services in dry-run mode", 
   await withMockedEnv(async () => {
     // Create and configure mock service with an unmapped service
     const mockDatadogService = new MockDatadogService();
-    
+
     // Set up monitors with various configurations including an unmapped service
     mockDatadogService.monitors = [
       createPagerDutyMonitor("api-critical", { id: 1, tags: ["env:prod"] }),
-      createPagerDutyMonitor("unmapped-service", { id: 2, tags: ["env:prod"] }) // This service has no mapping
+      createPagerDutyMonitor("unmapped-service", { id: 2, tags: ["env:prod"] }), // This service has no mapping
     ];
-    
+
     // Create test config with only one of the services mapped
     const config = {
       incidentioConfig: createTestConfig({
         webhookPerTeam: false,
         addTeamTags: true,
-        source: "pagerduty"
+        source: "pagerduty",
       }),
       // Only map api-critical, leave unmapped-service unmapped
       mappings: [
@@ -184,36 +184,44 @@ Deno.test("add-incidentio - does not reject unmapped services in dry-run mode", 
           incidentioTeam: "api-team",
           additionalMetadata: {
             priority: "high",
-            service: "api"
-          }
-        }
-      ]
+            service: "api",
+          },
+        },
+      ],
     };
-    
+
     // Create migration service with dryRun: true
     const migrationService = new MigrationService(
       mockDatadogService as unknown as DatadogService,
       config.incidentioConfig,
       config.mappings,
-      { dryRun: true }
+      { dryRun: true },
     );
-    
+
     // Act - run the migration in dry run mode
     const result = await migrationService.migrateMonitors({
       type: MigrationType.ADD_INCIDENTIO_WEBHOOK,
-      dryRun: true
+      dryRun: true,
     });
-    
+
     // Assert the validation results
-    assertEquals(result.validationResults?.valid, false, "Validation should fail");
     assertEquals(
-      result.validationResults?.unmappedServices.includes("unmapped-service"), 
-      true, 
-      "Should include unmapped-service in validation results"
+      result.validationResults?.valid,
+      false,
+      "Validation should fail",
     );
-    
+    assertEquals(
+      result.validationResults?.unmappedServices.includes("unmapped-service"),
+      true,
+      "Should include unmapped-service in validation results",
+    );
+
     // Verify that the monitors were still processed
-    assertEquals(result.processed, 2, "Should process all monitors in dry run mode");
+    assertEquals(
+      result.processed,
+      2,
+      "Should process all monitors in dry run mode",
+    );
   });
 });
 
@@ -227,19 +235,19 @@ Deno.test("add-incidentio - requires valid team names with team-specific webhook
   await withMockedEnv(async () => {
     // Create and configure mock service
     const mockDatadogService = new MockDatadogService();
-    
+
     // Set up monitors with PagerDuty services
     mockDatadogService.monitors = [
       createPagerDutyMonitor("api-critical", { id: 1, tags: ["env:prod"] }),
-      createPagerDutyMonitor("database", { id: 2, tags: ["env:prod"] })
+      createPagerDutyMonitor("database", { id: 2, tags: ["env:prod"] }),
     ];
-    
+
     // Create test config with team webhooks and a null team
     const config = {
       incidentioConfig: createTestConfig({
         webhookPerTeam: true, // Using team-specific webhooks
         addTeamTags: false,
-        source: "pagerduty"
+        source: "pagerduty",
       }),
       // Map api-critical properly but leave database with null team
       mappings: [
@@ -248,40 +256,40 @@ Deno.test("add-incidentio - requires valid team names with team-specific webhook
           incidentioTeam: "api-team",
           additionalMetadata: {
             priority: "high",
-            service: "api"
-          }
+            service: "api",
+          },
         },
         {
           pagerdutyService: "database",
           incidentioTeam: null, // Null team should cause validation to fail
           additionalMetadata: {
             priority: "high",
-            service: "database"
-          }
-        }
-      ]
+            service: "database",
+          },
+        },
+      ],
     };
-    
+
     // Create migration service
     const migrationService = new MigrationService(
       mockDatadogService as unknown as DatadogService,
       config.incidentioConfig,
       config.mappings,
-      { dryRun: false }
+      { dryRun: false },
     );
-    
+
     // Act - attempt to run the migration, expect it to throw
     await assertRejects(
       async () => {
         await migrationService.migrateMonitors({
           type: MigrationType.ADD_INCIDENTIO_WEBHOOK,
           webhookPerTeam: true,
-          dryRun: false
+          dryRun: false,
         });
       },
       Error,
       "Missing team assignments for: database",
-      "Should throw an error for null team assignments when using team webhooks"
+      "Should throw an error for null team assignments when using team webhooks",
     );
   });
 });
@@ -296,20 +304,20 @@ Deno.test("add-incidentio - requires valid team names with single webhook and ad
   await withMockedEnv(async () => {
     // Create and configure mock service
     const mockDatadogService = new MockDatadogService();
-    
+
     // Set up monitors with PagerDuty services
     mockDatadogService.monitors = [
       createPagerDutyMonitor("api-critical", { id: 1, tags: ["env:prod"] }),
-      createPagerDutyMonitor("database", { id: 2, tags: ["env:prod"] })
+      createPagerDutyMonitor("database", { id: 2, tags: ["env:prod"] }),
     ];
-    
+
     // Create test config with single webhook but addTeamTags enabled and a null team
     const config = {
       incidentioConfig: createTestConfig({
         webhookPerTeam: false, // Single webhook mode
-        addTeamTags: true,     // But with team tags enabled
+        addTeamTags: true, // But with team tags enabled
         teamTagPrefix: "team", // Using default team tag prefix
-        source: "pagerduty"
+        source: "pagerduty",
       }),
       // Map api-critical properly but leave database with null team
       mappings: [
@@ -318,40 +326,40 @@ Deno.test("add-incidentio - requires valid team names with single webhook and ad
           incidentioTeam: "api-team",
           additionalMetadata: {
             priority: "high",
-            service: "api"
-          }
+            service: "api",
+          },
         },
         {
           pagerdutyService: "database",
           incidentioTeam: null, // Null team should cause validation to fail
           additionalMetadata: {
             priority: "high",
-            service: "database"
-          }
-        }
-      ]
+            service: "database",
+          },
+        },
+      ],
     };
-    
+
     // Create migration service
     const migrationService = new MigrationService(
       mockDatadogService as unknown as DatadogService,
       config.incidentioConfig,
       config.mappings,
-      { dryRun: false }
+      { dryRun: false },
     );
-    
+
     // Act - attempt to run the migration, expect it to throw
     await assertRejects(
       async () => {
         await migrationService.migrateMonitors({
           type: MigrationType.ADD_INCIDENTIO_WEBHOOK,
           webhookPerTeam: false, // Single webhook mode
-          dryRun: false
+          dryRun: false,
         });
       },
       Error,
       "Missing team assignments for: database",
-      "Should throw an error for null team assignments when using single webhook with addTeamTags"
+      "Should throw an error for null team assignments when using single webhook with addTeamTags",
     );
   });
 });

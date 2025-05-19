@@ -207,7 +207,7 @@ You can configure the tool using a JSON configuration file. The tool will create
 - `webhookToken`: The secret token for your incident.io alert source
 - `addTeamTags`: (Optional) Whether to add team tags to monitors when using single webhook mode
 - `teamTagPrefix`: (Optional) The prefix to use for team tags (default: "team")
-- `source`: (Optional) The provider you're migrating from ("pagerduty" or "opsgenie", default: "pagerduty")
+- `source`: The provider you're migrating from ("pagerduty" or "opsgenie", default: "pagerduty")
 - `mappings`: An array of mappings from provider service names to incident.io team names
   - `pagerdutyService`: The provider service name (PagerDuty or Opsgenie)
   - `incidentioTeam`: The incident.io team name to route alerts to
