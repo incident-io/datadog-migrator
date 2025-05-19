@@ -42,13 +42,6 @@ export interface AnalyzeCommandOptions extends FilterableCommandOptions {
 }
 
 /**
- * Options for init command
- */
-export interface InitCommandOptions extends BaseCommandOptions {
-  path?: string;
-}
-
-/**
  * Standard parameter transformer for Denomander
  * Returns the provided value unchanged
  */
