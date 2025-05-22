@@ -6,10 +6,11 @@ import ora from "ora";
 import { createDefaultConfig } from "../utils/config.ts";
 import { DatadogService } from "../services/datadog.ts";
 import { MigrationMapping } from "../types/index.ts";
-import { PAGERDUTY_SERVICE_REGEX } from "../utils/regex.ts";
+import { getServiceRegexForProvider } from "../utils/regex.ts";
 import Denomander from "https://deno.land/x/denomander@0.9.3/src/Denomander.ts";
 
-const identity = (i: string) => i;
+const identity: (x: string) => string = (i: string) => i;
+
 export function registerInitConfigCommand(program: Denomander): void {
   program
     .command("init")
@@ -33,7 +34,9 @@ export function registerInitConfigCommand(program: Denomander): void {
       "./config.json",
     )
     .action(
-      async (options: { path: string; "api-key": string; "app-key": string }) => {
+      async (
+        options: { path: string; "api-key": string; "app-key": string },
+      ) => {
         try {
           // Check if the file already exists
           const configPath = path.resolve(options.path);
@@ -44,8 +47,7 @@ export function registerInitConfigCommand(program: Denomander): void {
                 `File ${options.path} already exists. Overwrite? (y/N)`,
               );
               const answer = prompt("> ");
-              const overwrite =
-                answer?.toLowerCase() === "y" ||
+              const overwrite = answer?.toLowerCase() === "y" ||
                 answer?.toLowerCase() === "yes";
 
               if (!overwrite) {
@@ -61,6 +63,32 @@ export function registerInitConfigCommand(program: Denomander): void {
           const defaultConfig = createDefaultConfig();
 
           // Datadog credentials will be provided as CLI arguments when running commands
+
+          // Ask which provider they are migrating from
+          const { provider }: {
+            provider: "pagerduty" | "opsgenie";
+          } = await inquirer.prompt([
+            {
+              type: "list",
+              name: "provider",
+              message: "Which provider are you migrating from?",
+              choices: [
+                {
+                  name: "PagerDuty",
+                  value: "pagerduty",
+                  description: "Migrate from PagerDuty to incident.io",
+                },
+                {
+                  name: "Opsgenie",
+                  value: "opsgenie",
+                  description: "Migrate from Opsgenie to incident.io",
+                },
+              ],
+            },
+          ]);
+
+          // Set the provider in the config
+          defaultConfig.incidentioConfig.source = provider;
 
           // Ask about incident.io configuration
           const { webhookStrategy } = await inquirer.prompt([
@@ -136,7 +164,7 @@ export function registerInitConfigCommand(program: Denomander): void {
           // Get incident.io alert source details
           // Check if webhook token is in env
           const envWebhookToken = Deno.env.get("INCIDENTIO_WEBHOOK_TOKEN");
-          
+
           const promptQuestions: Parameters<typeof inquirer.prompt> = [
             {
               type: "input",
@@ -148,13 +176,14 @@ export function registerInitConfigCommand(program: Denomander): void {
                   : "Please enter a valid URL (should start with http or https)",
             },
           ];
-          
+
           // Only prompt for webhook token if not in environment variable
           if (!envWebhookToken) {
             promptQuestions.push({
               type: "input",
               name: "webhookToken",
-              message: "Enter the incident.io alert source secret token (or ctrl+c to quit and set it in your .env as INCIDENTIO_WEBHOOK_TOKEN):",
+              message:
+                "Enter the incident.io alert source secret token (or ctrl+c to quit and set it in your .env as INCIDENTIO_WEBHOOK_TOKEN):",
               validate: (input) =>
                 input
                   ? true
@@ -168,12 +197,12 @@ export function registerInitConfigCommand(program: Denomander): void {
           const answers = await inquirer.prompt(promptQuestions);
           const webhookUrl = answers.webhookUrl;
           const webhookToken = envWebhookToken || answers.webhookToken;
-          
+
           if (!webhookToken && !envWebhookToken) {
             console.log(
               kleur.yellow(
-                "\nNo webhook token provided. You can add it to your .env file as INCIDENTIO_WEBHOOK_TOKEN to avoid being prompted for it in the future."
-              )
+                "\nNo webhook token provided. You can add it to your .env file as INCIDENTIO_WEBHOOK_TOKEN to avoid being prompted for it in the future.",
+              ),
             );
             Deno.exit(1);
           }
@@ -212,9 +241,14 @@ export function registerInitConfigCommand(program: Denomander): void {
             defaultConfig.incidentioConfig.webhookToken = cleanToken;
           }
 
+          const providerName = provider === "opsgenie"
+            ? "Opsgenie"
+            : "PagerDuty";
+
           console.log(
             kleur.blue(
-              "\nWe'll scan for PagerDuty services and add them to your config file.",
+              `
+We'll scan for ${providerName} services and add them to your config file.`,
             ),
           );
           console.log(
@@ -240,7 +274,7 @@ export function registerInitConfigCommand(program: Denomander): void {
             spinner.succeed(`Configuration file created at ${options.path}`);
 
             // Now detect PagerDuty services automatically
-            spinner.start("Detecting PagerDuty services from monitors");
+            spinner.start(`Detecting ${providerName} services from monitors`);
 
             try {
               const datadogService = new DatadogService({
@@ -251,36 +285,57 @@ export function registerInitConfigCommand(program: Denomander): void {
               // Get all monitors to detect PagerDuty services
               const monitors = await datadogService.getMonitors();
 
-              // Extract all PagerDuty services
+              const providerRegex = getServiceRegexForProvider(provider);
+
+              // Extract all provider services
               const services = new Set<string>();
 
               for (const monitor of monitors) {
-                const matches = [...monitor.message.matchAll(PAGERDUTY_SERVICE_REGEX)];
+                const matches = [...monitor.message.matchAll(providerRegex)];
                 for (const match of matches) {
                   services.add(match[1]);
                 }
               }
 
-              const pagerDutyServices = [...services].sort();
+              const detectedServices = [...services].sort();
               spinner.succeed(
-                `Detected ${pagerDutyServices.length} PagerDuty services`,
+                `Detected ${detectedServices.length} ${providerName} services`,
               );
 
-              if (pagerDutyServices.length > 0) {
+              if (detectedServices.length > 0) {
                 // Create mappings for detected services (excluding ones already manually added)
                 const existingServices = new Set(
                   defaultConfig.mappings.map(
-                    (m: MigrationMapping) => m.pagerdutyService,
+                    (m: MigrationMapping) =>
+                      provider === "opsgenie"
+                        ? m.opsgenieService
+                        : m.pagerdutyService,
                   ),
                 );
                 const newMappings = [];
 
-                for (const service of pagerDutyServices) {
+                for (const service of detectedServices) {
                   if (!existingServices.has(service)) {
-                    defaultConfig.mappings.push({
-                      pagerdutyService: service,
-                      incidentioTeam: null, // Placeholder for user to fill in
-                    });
+                    const mappingKey = provider === "opsgenie"
+                      ? "opsgenieService"
+                      : "pagerdutyService";
+
+                     // Add an example of additionalMetadata for the first service
+                    if (newMappings.length === 0) {
+                      defaultConfig.mappings.push({
+                        [mappingKey]: service,
+                        incidentioTeam: null, // Placeholder for user to fill in
+                        additionalMetadata: {
+                          // Example metadata - useful for differentiating similar services
+                          "service": service,
+                        },
+                      });
+                    } else {
+                      defaultConfig.mappings.push({
+                        [mappingKey]: service,
+                        incidentioTeam: null, // Placeholder for user to fill in
+                      });
+                    }
                     newMappings.push(service);
                   }
                 }
@@ -294,7 +349,7 @@ export function registerInitConfigCommand(program: Denomander): void {
                 if (newMappings.length > 0) {
                   console.log(
                     kleur.green(
-                      `\nAdded ${newMappings.length} PagerDuty service mappings to config file:`,
+                      `\nAdded ${newMappings.length} ${providerName} service mappings to config file:`,
                     ),
                   );
                   console.log(newMappings.map((s) => `  - ${s}`).join("\n"));
@@ -303,25 +358,45 @@ export function registerInitConfigCommand(program: Denomander): void {
                       "\nPlease edit the file to fill and set the relevant incident-io teams before running the 'add-incidentio' command.",
                     ),
                   );
+
+                  // Add advice about additionalMetadata
+                  console.log(
+                    kleur.cyan(
+                      "\nTIP: You can use additionalMetadata fields to add extra context to your alerts:",
+                    ),
+                  );
+                  console.log(
+                    "1. Differentiate between critical and non-critical services mapping to the same team",
+                  );
+                  console.log(
+                    "2. Include environment or service details in your alerts",
+                  );
+                  console.log(
+                    "3. With single webhooks, these fields become monitor tags; with team webhooks, they're added to payloads",
+                  );
                   Deno.exit(0);
                 }
               } else {
                 console.log(
                   kleur.yellow(
-                    "\nNo PagerDuty services detected in your monitors.",
+                    `\nNo ${providerName} services detected in your monitors.`,
                   ),
                 );
               }
             } catch (detectionError) {
-              spinner.fail("Failed to detect PagerDuty services");
+              spinner.fail(`Failed to detect ${providerName} services`);
               console.error(
                 kleur.red(
-                  `Error: ${detectionError instanceof Error ? detectionError.message : String(detectionError)}`,
+                  `Error: ${
+                    detectionError instanceof Error
+                      ? detectionError.message
+                      : String(detectionError)
+                  }`,
                 ),
               );
               console.log(
                 kleur.yellow(
-                  "Config file was created but automatic PagerDuty service detection failed.",
+                  `Config file was created but automatic ${providerName} service detection failed.`,
                 ),
               );
             }
@@ -329,14 +404,18 @@ export function registerInitConfigCommand(program: Denomander): void {
             spinner.fail("Failed to create configuration file");
             console.error(
               kleur.red(
-                `Error: ${error instanceof Error ? error.message : String(error)}`,
+                `Error: ${
+                  error instanceof Error ? error.message : String(error)
+                }`,
               ),
             );
           }
         } catch (error) {
           console.error(
             kleur.red(
-              `Error: ${error instanceof Error ? error.message : String(error)}`,
+              `Error: ${
+                error instanceof Error ? error.message : String(error)
+              }`,
             ),
           );
         }

@@ -4,12 +4,15 @@ export interface IncidentioConfig {
   webhookToken?: string;
   addTeamTags?: boolean;
   teamTagPrefix?: string;
+  source: 'pagerduty' | 'opsgenie';
 }
 
 export interface MigrationMapping {
   pagerdutyService?: string;
+  opsgenieService?: string;
   incidentioTeam?: string | null;
   webhookName?: string;
+  additionalMetadata?: Record<string, string>;
 }
 
 export interface MigrationConfig {
@@ -22,19 +25,18 @@ export interface DatadogMonitor {
   name: string;
   message: string;
   tags: string[];
-  // Additional properties as needed
 }
 
 export enum MigrationType {
   ADD_INCIDENTIO_WEBHOOK = "add_incidentio",
   REMOVE_INCIDENTIO_WEBHOOK = "remove_incidentio",
-  REMOVE_PAGERDUTY = "remove_pagerduty",
+  REMOVE_PROVIDER = "remove_provider",
 }
 
 export interface FilterOptions {
   tags?: string[];
-  namePattern?: RegExp;
-  messagePattern?: RegExp;
+  name?: string;
+  message?: string;
 }
 
 export interface MigrationOptions {
