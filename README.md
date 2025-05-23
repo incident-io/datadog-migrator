@@ -2,6 +2,8 @@
 
 A CLI tool to help migrate Datadog monitors over from PagerDuty or Opsgenie to incident.io.
 
+Learn more about usage in [this Loom](https://www.loom.com/share/1f0a862752054bb0a1a8830f5bd9c500) which walks through it.
+
 ## Features
 
 - Add incident.io webhooks to monitors that currently use PagerDuty or Opsgenie
