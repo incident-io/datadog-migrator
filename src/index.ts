@@ -34,7 +34,7 @@ Deno.addSignalListener("SIGINT", () => {
 // Parse Deno args
 try {
   program.parse(Deno.args);
-} catch (error) {
+} catch (error: any) {
   console.error(error.message);
   program.showHelp();
 }

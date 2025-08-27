@@ -10,6 +10,9 @@ export interface BaseCommandOptions {
   "api-key": string;
   "app-key": string;
 
+  // Datadog site (e.g datadoghq.eu)
+  "site": string;
+
   // Config path
   config: string;
 }

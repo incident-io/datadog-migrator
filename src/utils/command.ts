@@ -21,10 +21,12 @@ export { CommandOptions };
 export function createDatadogService(options: {
   "api-key": string;
   "app-key": string;
+  "site": string;
 }): DatadogService {
   return new DatadogService({
     apiKey: options["api-key"],
     appKey: options["app-key"],
+    site: options["site"],
   });
 }
 

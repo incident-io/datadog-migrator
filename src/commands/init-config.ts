@@ -28,6 +28,11 @@ export function registerInitConfigCommand(program: Denomander): void {
       Deno.env.get("DATADOG_APP_KEY"),
     )
     .option(
+      "-s, --site",
+      "Datadog site (e.g datadoghq.eu)",
+      identity,
+    )
+    .option(
       "-p, --path",
       "Path to save the config file",
       identity,
@@ -35,7 +40,7 @@ export function registerInitConfigCommand(program: Denomander): void {
     )
     .action(
       async (
-        options: { path: string; "api-key": string; "app-key": string },
+        options: { path: string; "api-key": string; "app-key": string; "site": string },
       ) => {
         try {
           // Check if the file already exists
@@ -280,6 +285,7 @@ We'll scan for ${providerName} services and add them to your config file.`,
               const datadogService = new DatadogService({
                 apiKey: options["api-key"],
                 appKey: options["app-key"],
+                site: options["site"],
               });
 
               // Get all monitors to detect PagerDuty services

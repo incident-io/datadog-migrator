@@ -13,7 +13,7 @@ export class DatadogService {
   private monitorsApi: v1.MonitorsApi;
   private webhooksApi: v1.WebhooksIntegrationApi;
 
-  constructor({ apiKey, appKey }: { apiKey: string; appKey: string }) {
+  constructor({ apiKey, appKey, site }: { apiKey: string; appKey: string; site: string }) {
     // Validate credentials
     if (!apiKey || !appKey) {
       throw new Error(
@@ -28,6 +28,13 @@ export class DatadogService {
         appKeyAuth: appKey,
       },
     });
+
+    // Set the site (e.g datadoghq.eu) if provided
+    if (site) {
+      configuration.setServerVariables({
+        site: site,
+      });
+    }
 
     debug("Created Datadog API client configuration");
 
