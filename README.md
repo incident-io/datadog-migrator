@@ -241,10 +241,13 @@ If you want to build the binaries yourself:
 1. Clone the repository
 2. Install [Deno](https://deno.land/#installation) if you don't have it already
 3. Build the project with:
+
    ```bash
    deno task build
    ```
+
 4. Or build platform-specific binaries:
+
    ```bash
    deno task build:mac      # macOS Intel
    deno task build:mac-arm  # macOS Apple Silicon
@@ -258,16 +261,19 @@ The binaries will be available in the `dist` directory.
 
 To create a new release:
 
-1. Update the version in `package.json`
-2. Create a git tag for the version:
+1. Create a git tag for the version:
+
    ```bash
    git tag v1.0.0  # Replace with your version
    ```
-3. Push the tag to GitHub:
+
+2. Push the tag to GitHub:
+
    ```bash
    git push origin v1.0.0
    ```
-4. The GitHub Actions workflow will automatically build binaries and create a release
+
+3. The GitHub Actions workflow will automatically build binaries and create a release
 
 ## License
 
