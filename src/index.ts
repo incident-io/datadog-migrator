@@ -1,5 +1,6 @@
 #!/usr/bin/env -S deno run --allow-read --allow-env --allow-net --allow-write
 
+import "./utils/suppress-node-warnings.ts";
 import Denomander from "https://deno.land/x/denomander/mod.ts";
 
 import "@std/dotenv/load";
