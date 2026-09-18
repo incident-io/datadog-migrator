@@ -38,6 +38,27 @@ export function registerInitConfigCommand(program: Denomander): void {
         options: { path: string; "api-key": string; "app-key": string },
       ) => {
         try {
+          if (!options["api-key"] || !options["app-key"]) {
+            console.error(
+              kleur.red(
+                "Error: Datadog API credentials are required to run init.",
+              ),
+            );
+            console.error(
+              "Set DATADOG_API_KEY and DATADOG_APP_KEY in your environment (or .env file),\n" +
+              "or pass them via --api-key and --app-key.",
+            );
+            Deno.exit(1);
+          }
+
+          const site = Deno.env.get("DATADOG_SITE") || "datadoghq.com";
+          console.log(
+            kleur.blue(`Targeting Datadog site: ${kleur.bold(site)}`) +
+            (Deno.env.get("DATADOG_SITE")
+              ? ""
+              : kleur.dim(" (set DATADOG_SITE to override)"))
+          );
+
           // Check if the file already exists
           const configPath = path.resolve(options.path);
           try {

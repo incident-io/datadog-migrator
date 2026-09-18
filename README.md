@@ -24,6 +24,7 @@ Learn more about usage in [this Loom](https://www.loom.com/share/1f0a862752054bb
 You can download the latest binary release from the [GitHub Releases](https://github.com/incident-io/datadog-migrator/releases) page.
 
 Choose the appropriate binary for your system:
+
 - **macOS Intel**: `datadog-migrator-macos-x64-VERSION`
 - **macOS Apple Silicon**: `datadog-migrator-macos-arm64-VERSION`
 - **Linux**: `datadog-migrator-linux-x64-VERSION`
@@ -75,11 +76,16 @@ datadog-migrator init
 ```
 
 Options:
-- `-k, --api-key <key>` - Datadog API key
-- `-a, --app-key <key>` - Datadog App key
+
+- `-k, --api-key <key>` - Datadog API key (or `DATADOG_API_KEY` env var)
+- `-a, --app-key <key>` - Datadog App key (or `DATADOG_APP_KEY` env var)
 - `--path <path>` - Path to save the config file (default: ./config.json)
 
+The application key requires the `monitors_read` scope for service detection during init.
+Set `DATADOG_SITE` if your organisation is not on the default US1 site (`datadoghq.com`).
+
 The init command will:
+
 1. Ask which provider you're migrating from (PagerDuty or Opsgenie)
 2. Ask how you want to tag incident.io webhooks (single webhook or team-specific)
 3. If using a single webhook, ask if you want to add team tags to monitors
@@ -96,6 +102,7 @@ datadog-migrator add-incidentio
 ```
 
 Options:
+
 - `-k, --api-key <key>` - Datadog API key
 - `-a, --app-key <key>` - Datadog App key
 - `-c, --config <path>` - Path to config file
@@ -115,6 +122,7 @@ datadog-migrator remove-incidentio
 ```
 
 Options:
+
 - `-k, --api-key <key>` - Datadog API key
 - `-a, --app-key <key>` - Datadog App key
 - `-c, --config <path>` - Path to config file
@@ -133,6 +141,7 @@ datadog-migrator remove-provider
 ```
 
 Options:
+
 - `-k, --api-key <key>` - Datadog API key
 - `-a, --app-key <key>` - Datadog App key
 - `-c, --config <path>` - Path to config file
@@ -151,6 +160,7 @@ datadog-migrator analyze
 ```
 
 Options:
+
 - `-k, --api-key <key>` - Datadog API key
 - `-a, --app-key <key>` - Datadog App key
 - `-c, --config <path>` - Path to config file
@@ -229,10 +239,17 @@ When using team-specific webhooks, this metadata is included directly in the web
 
 You can also use environment variables for configuration:
 
-```
+```sh
 DATADOG_API_KEY=your_api_key_here
 DATADOG_APP_KEY=your_app_key_here
+DATADOG_SITE=datadoghq.com        # optional; default is datadoghq.com (EU: datadoghq.eu, US3: us3.datadoghq.com, etc.)
+INCIDENTIO_WEBHOOK_TOKEN=your_webhook_token_here  # optional; overrides webhookToken in config
 ```
+
+The required application key scopes depend on which commands you run:
+
+- `init`, `analyze`: `monitors_read`
+- `add-incidentio`, `remove-incidentio`, `remove-provider`: `monitors_read`, `monitors_write`, `integrations_read`, `integrations_write`
 
 ## Building from source
 

@@ -21,13 +21,15 @@ export class DatadogService {
       );
     }
 
-    // Configure the client - using environment variables is also supported by the client
+    const site = Deno.env.get("DATADOG_SITE") || "datadoghq.com";
+
     const configuration = client.createConfiguration({
       authMethods: {
         apiKeyAuth: apiKey,
         appKeyAuth: appKey,
       },
     });
+    configuration.setServerVariables({ site });
 
     debug("Created Datadog API client configuration");
 
@@ -50,7 +52,10 @@ export class DatadogService {
       }));
     } catch (error) {
       if (error instanceof Error) {
-        throw new Error(`Failed to fetch monitors: ${error.message}`);
+        const hint = error.message.includes("403")
+          ? "\nEnsure the Datadog application key has the monitors_read scope."
+          : "";
+        throw new Error(`Failed to fetch monitors: ${error.message}${hint}`);
       }
       throw error;
     }
@@ -105,7 +110,10 @@ export class DatadogService {
       debug(`Error updating monitor ${id}: ${String(error)}`);
       console.error(`Error updating monitor ${id}:`, error);
       if (error instanceof Error) {
-        throw new Error(`Failed to update monitor ${id}: ${error.message}`);
+        const hint = error.message.includes("403")
+          ? "\nEnsure the Datadog application key has the monitors_write scope."
+          : "";
+        throw new Error(`Failed to update monitor ${id}: ${error.message}${hint}`);
       }
       throw error;
     }
@@ -135,9 +143,10 @@ export class DatadogService {
       debug(`Error creating webhook ${webhook.name}: ${String(error)}`);
       console.error(`Error creating webhook ${webhook.name}:`, error);
       if (error instanceof Error) {
-        throw new Error(
-          `Failed to create webhook ${webhook.name}: ${error.message}`,
-        );
+        const hint = error.message.includes("403")
+          ? "\nEnsure the Datadog application key has the integrations_write scope."
+          : "";
+        throw new Error(`Failed to create webhook ${webhook.name}: ${error.message}${hint}`);
       }
       throw error;
     }
@@ -151,7 +160,14 @@ export class DatadogService {
       });
       return webhook;
     } catch (error) {
-      // If the webhook doesn't exist, we'll get a 404
+      if (error instanceof Error) {
+        if (error.message.includes("403")) {
+          throw new Error(
+            `Failed to get webhook ${name}: ${error.message}\nEnsure the Datadog application key has the integrations_read scope.`,
+          );
+        }
+        // Treat anything else (404, network hiccup) as "doesn't exist"
+      }
       debug(`Webhook ${name} not found or error: ${String(error)}`);
       return null;
     }
