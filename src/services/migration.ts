@@ -8,7 +8,6 @@ import {
   MigrationType,
 } from "../types/index.ts";
 import { debug } from "../utils/config.ts";
-import kleur from "kleur";
 import { getServiceRegexForProvider } from "../utils/regex.ts";
 
 export type MigrationChange = {
@@ -427,16 +426,15 @@ export class MigrationService {
    * Create a webhook in Datadog if it doesn't already exist
    * @param webhookName The name of the webhook to create (without @ prefix)
    * @param team Optional team name to include in payload
-   * @returns true if successful, false if failed or skipped
    */
   private async ensureWebhookExists(
     webhookName: string,
     team?: string,
     additionalMetadata?: Record<string, string>,
-  ): Promise<boolean> {
+  ): Promise<void> {
     if (this.dryRun) {
       debug(`Dry run: Skipping webhook creation for ${webhookName}`);
-      return true;
+      return;
     }
 
     // Get the actual Datadog webhook name (without the webhook- prefix)
@@ -447,7 +445,7 @@ export class MigrationService {
       debug(
         `Webhook ${datadogWebhookName} was already created in this session`,
       );
-      return true;
+      return;
     }
 
     // Check if webhook already exists
@@ -456,7 +454,7 @@ export class MigrationService {
       if (webhook) {
         debug(`Webhook ${datadogWebhookName} already exists`);
         this.createdWebhooks.add(datadogWebhookName);
-        return true;
+        return;
       }
 
       // Webhook doesn't exist - check if we have URL and token
@@ -464,19 +462,10 @@ export class MigrationService {
         !this.incidentioConfig.webhookUrl ||
         !this.incidentioConfig.webhookToken
       ) {
-        debug(
-          `Missing webhook URL or token, cannot create webhook ${datadogWebhookName}`,
+        throw new Error(
+          `Missing incident.io webhook URL or token, so webhook ${datadogWebhookName} cannot be created. ` +
+            "Set incidentioConfig.webhookUrl and webhookToken in your config, or INCIDENTIO_WEBHOOK_TOKEN in your .env",
         );
-        if (!this.incidentioConfig.webhookToken) {
-          console.log(
-            kleur.yellow(
-              `\nMissing incident.io webhook token. You can either:
-- Add it to your config file under incidentioConfig.webhookToken, or
-- Set it in your .env file as INCIDENTIO_WEBHOOK_TOKEN to avoid storing it in your config`,
-            ),
-          );
-        }
-        return false;
       }
 
       // Standard Datadog webhook payload
@@ -537,10 +526,9 @@ export class MigrationService {
 
       debug(`Created webhook ${datadogWebhookName}`);
       this.createdWebhooks.add(datadogWebhookName);
-      return true;
     } catch (error) {
       debug(`Error creating webhook ${webhookName}: ${String(error)}`);
-      return false;
+      throw error;
     }
   }
 
@@ -603,16 +591,7 @@ export class MigrationService {
           if (!dryRun) {
             // For single webhook strategy, we don't include metadata in the webhook itself
             // Instead, we'll add metadata as tags to the monitors
-            const webhookExists = await this.ensureWebhookExists(webhookName);
-            if (!webhookExists) {
-              return {
-                updated: false,
-                message: newMessage,
-                reason: "Failed to create required webhook",
-                tagsBefore,
-                tagsAfter,
-              };
-            }
+            await this.ensureWebhookExists(webhookName);
           }
 
           // Check if we need to add team tags or metadata tags when using single webhook
@@ -715,22 +694,11 @@ export class MigrationService {
 
             // Create team-specific webhook if needed
             if (!dryRun) {
-              const webhookCreated = await this.ensureWebhookExists(
+              await this.ensureWebhookExists(
                 webhookName,
                 team,
                 mapping?.additionalMetadata, // Pass the additional metadata
               );
-              if (!webhookCreated) {
-                return {
-                  updated: false,
-                  message: newMessage,
-                  reason: `Failed to create required webhook for team ${
-                    team || "unknown"
-                  }`,
-                  tagsBefore,
-                  tagsAfter,
-                };
-              }
             }
 
             expectedWebhooks.add(`@${webhookName}`);
@@ -834,48 +802,25 @@ export class MigrationService {
           )}`
         : `EXECUTING UPDATE - Attempting to update monitor ${monitor.id} with message: "${newMessage}"`;
       debug(debugMessage);
-      try {
-        // Prepare update payload with message and potentially tags
-        const updatePayload: Partial<DatadogMonitor> = { message: newMessage };
+      // Prepare update payload with message and potentially tags
+      const updatePayload: Partial<DatadogMonitor> = { message: newMessage };
 
-        // Include tags in the update if they were modified
-        if (tagsAfter) {
-          updatePayload.tags = tagsAfter;
-        }
-
-        const updatedMonitor = await this.datadogService.updateMonitor(
-          monitor.id,
-          updatePayload,
-        );
-        debug(
-          `Successfully updated monitor ${monitor.id} - Response ID: ${updatedMonitor.id}`,
-        );
-        const updateDescriptor = tagsAfter ? "message and tags" : "message";
-        console.log(
-          `Successfully updated monitor ${monitor.id} (${monitor.name}) - ${updateDescriptor}`,
-        );
-      } catch (error) {
-        debug(
-          `CRITICAL ERROR - Failed to update monitor ${monitor.id}: ${
-            error instanceof Error ? error.message : String(error)
-          }`,
-        );
-        console.error(
-          `Failed to update monitor ${monitor.id}: ${
-            error instanceof Error ? error.message : String(error)
-          }`,
-        );
-        // Return false to indicate the update failed
-        return {
-          updated: false,
-          message: message,
-          reason: `API update failed: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`,
-          tagsBefore,
-          tagsAfter,
-        };
+      // Include tags in the update if they were modified
+      if (tagsAfter) {
+        updatePayload.tags = tagsAfter;
       }
+
+      const updatedMonitor = await this.datadogService.updateMonitor(
+        monitor.id,
+        updatePayload,
+      );
+      debug(
+        `Successfully updated monitor ${monitor.id} - Response ID: ${updatedMonitor.id}`,
+      );
+      const updateDescriptor = tagsAfter ? "message and tags" : "message";
+      console.log(
+        `Successfully updated monitor ${monitor.id} (${monitor.name}) - ${updateDescriptor}`,
+      );
     } else if (updated && dryRun) {
       debug(`Skipping update of monitor ${monitor.id} (dry run mode)`);
     }
