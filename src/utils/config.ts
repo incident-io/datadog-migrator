@@ -9,6 +9,11 @@ export function debug(message: string, ...args: unknown[]) {
   }
 }
 
+// DATADOG_SITE wins; DD_SITE is the name the Datadog client reads itself
+export function datadogSite(): string | undefined {
+  return process.env.DATADOG_SITE || process.env.DD_SITE;
+}
+
 export function loadConfig(filePath: string): MigrationConfig {
   try {
     const configPath = path.resolve(filePath);

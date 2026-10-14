@@ -1,6 +1,16 @@
 import { client, v1 } from "@datadog/datadog-api-client";
 import { DatadogMonitor } from "../types/index.ts";
-import { debug } from "../utils/config.ts";
+import { datadogSite, debug } from "../utils/config.ts";
+
+function isForbidden(error: unknown): boolean {
+  return error instanceof client.ApiException && error.code === 403;
+}
+
+function scopeHint(error: unknown, scope: string): string {
+  return isForbidden(error)
+    ? `\nEnsure the Datadog application key has the ${scope} scope.`
+    : "";
+}
 
 interface DatadogWebhook {
   name: string;
@@ -21,13 +31,16 @@ export class DatadogService {
       );
     }
 
-    // Configure the client - using environment variables is also supported by the client
     const configuration = client.createConfiguration({
       authMethods: {
         apiKeyAuth: apiKey,
         appKeyAuth: appKey,
       },
     });
+    const site = datadogSite();
+    if (site) {
+      configuration.setServerVariables({ site });
+    }
 
     debug("Created Datadog API client configuration");
 
@@ -50,7 +63,9 @@ export class DatadogService {
       }));
     } catch (error) {
       if (error instanceof Error) {
-        throw new Error(`Failed to fetch monitors: ${error.message}`);
+        throw new Error(
+          `Failed to fetch monitors: ${error.message}${scopeHint(error, "monitors_read")}`,
+        );
       }
       throw error;
     }
@@ -105,7 +120,9 @@ export class DatadogService {
       debug(`Error updating monitor ${id}: ${String(error)}`);
       console.error(`Error updating monitor ${id}:`, error);
       if (error instanceof Error) {
-        throw new Error(`Failed to update monitor ${id}: ${error.message}`);
+        throw new Error(
+          `Failed to update monitor ${id}: ${error.message}${scopeHint(error, "monitors_write")}`,
+        );
       }
       throw error;
     }
@@ -136,7 +153,7 @@ export class DatadogService {
       console.error(`Error creating webhook ${webhook.name}:`, error);
       if (error instanceof Error) {
         throw new Error(
-          `Failed to create webhook ${webhook.name}: ${error.message}`,
+          `Failed to create webhook ${webhook.name}: ${error.message}${scopeHint(error, "create_webhooks")}`,
         );
       }
       throw error;
@@ -151,7 +168,11 @@ export class DatadogService {
       });
       return webhook;
     } catch (error) {
-      // If the webhook doesn't exist, we'll get a 404
+      if (isForbidden(error)) {
+        throw new Error(
+          `Failed to get webhook ${name}: ${(error as Error).message}${scopeHint(error, "integrations_read")}`,
+        );
+      }
       debug(`Webhook ${name} not found or error: ${String(error)}`);
       return null;
     }
