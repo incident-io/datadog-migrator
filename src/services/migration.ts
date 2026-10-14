@@ -707,10 +707,8 @@ export class MigrationService {
           // Calculate expected webhooks based on mappings
           const expectedWebhooks = new Set<string>();
           for (const service of providerServices) {
-            const mapping = this.mappings.find(
-              (m) => m.pagerdutyService === service,
-            );
-            const team = mapping?.incidentioTeam ?? undefined;
+            const mapping = this.getMappingForService(service);
+            const team = mapping.incidentioTeam ?? undefined;
             const webhookName = this.getWebhookNameForTeam(team);
 
             // Create team-specific webhook if needed
@@ -718,7 +716,7 @@ export class MigrationService {
               const webhookCreated = await this.ensureWebhookExists(
                 webhookName,
                 team,
-                mapping?.additionalMetadata, // Pass the additional metadata
+                mapping.additionalMetadata,
               );
               if (!webhookCreated) {
                 return {
