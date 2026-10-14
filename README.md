@@ -62,6 +62,18 @@ datadog-migrator remove-provider --api-key YOUR_API_KEY --app-key YOUR_APP_KEY -
 datadog-migrator analyze --api-key YOUR_API_KEY --app-key YOUR_APP_KEY --config config.json
 ```
 
+## Running both providers in parallel
+
+You don't have to switch over in one step. `add-incidentio` adds the incident.io webhook next to the existing PagerDuty or Opsgenie mention, and leaves that mention in place. Datadog then notifies both, so you can check that incident.io gets every alert before you change anything for your responders.
+
+A typical migration:
+
+1. `add-incidentio`: monitors now alert PagerDuty or Opsgenie **and** incident.io
+2. Run both for as long as you need. `analyze` shows how many monitors have both, and which have only one
+3. `remove-provider` at cutover: removes the PagerDuty or Opsgenie mentions, and skips any monitor that has no incident.io webhook yet
+
+If you need to go back, `remove-incidentio` removes the incident.io webhooks and leaves the original mentions as they were.
+
 ## Commands
 
 ### init
@@ -92,7 +104,7 @@ The init command will:
 
 ### add-incidentio
 
-Add incident.io webhooks to monitors that currently use PagerDuty or Opsgenie:
+Add incident.io webhooks to monitors that currently use PagerDuty or Opsgenie. The PagerDuty or Opsgenie mentions stay, so both get alerts until you run `remove-provider` (see [Running both providers in parallel](#running-both-providers-in-parallel)):
 
 ```bash
 datadog-migrator add-incidentio
