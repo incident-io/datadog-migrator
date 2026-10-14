@@ -820,6 +820,16 @@ export class MigrationService {
           };
         }
 
+        if (this.findIncidentioWebhooks(message).length === 0) {
+          return {
+            updated: false,
+            message: newMessage,
+            reason: `No incident.io webhook, so removing ${provider} would leave nobody paged`,
+            tagsBefore,
+            tagsAfter,
+          };
+        }
+
         newMessage = removeMentions(newMessage, serviceRegex);
         updated = true;
         break;

@@ -59,7 +59,7 @@ export function registerRemoveProviderCommand(program: Command): void {
         );
         console.log(
           kleur.yellow(
-            `This will remove all ${displayName} service mentions from your monitors.`,
+            `This will remove ${displayName} service mentions from monitors that already have an incident.io webhook.`,
           ),
         );
         console.log(
