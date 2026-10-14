@@ -4,7 +4,7 @@ export interface IncidentioConfig {
   webhookToken?: string;
   addTeamTags?: boolean;
   teamTagPrefix?: string;
-  source: 'pagerduty' | 'opsgenie';
+  source: "pagerduty" | "opsgenie";
 }
 
 export interface MigrationMapping {

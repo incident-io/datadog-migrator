@@ -9,14 +9,15 @@ import { registerRemoveProviderCommand } from "./commands/remove-provider.ts";
 import { registerInitConfigCommand } from "./commands/init-config.ts";
 import { registerAnalyzeCommand } from "./commands/analyze.ts";
 
-
 // Display banner
 displayBanner();
 
 // Create program
 const program = new Command()
   .name("datadog-migrator")
-  .description("CLI tool to migrate Datadog monitors from PagerDuty/Opsgenie to incident.io");
+  .description(
+    "CLI tool to migrate Datadog monitors from PagerDuty/Opsgenie to incident.io",
+  );
 
 // Register commands
 registerInitConfigCommand(program);

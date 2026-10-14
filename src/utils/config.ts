@@ -36,7 +36,7 @@ export function loadConfig(filePath: string): MigrationConfig {
         webhookPerTeam: false,
         webhookUrl: undefined,
         webhookToken: undefined,
-        source: "pagerduty" // Default to PagerDuty if not specified
+        source: "pagerduty", // Default to PagerDuty if not specified
       };
     }
 

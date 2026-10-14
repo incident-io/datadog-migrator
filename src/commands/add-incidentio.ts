@@ -75,12 +75,11 @@ export function registerAddIncidentioCommand(program: Command): void {
           {
             type: "confirm",
             name: "confirmed",
-            message:
-              `This will add ${webhookType}${tagMessage} to monitors with ${providerName} services.${
-                !incidentioConfig.webhookPerTeam && incidentioConfig.addTeamTags
-                  ? `\n  Team tags will be derived from your ${providerName}-to-team mappings in config.json.`
-                  : ""
-              }\n  Continue?`,
+            message: `This will add ${webhookType}${tagMessage} to monitors with ${providerName} services.${
+              !incidentioConfig.webhookPerTeam && incidentioConfig.addTeamTags
+                ? `\n  Team tags will be derived from your ${providerName}-to-team mappings in config.json.`
+                : ""
+            }\n  Continue?`,
             default: false,
           },
         ]);

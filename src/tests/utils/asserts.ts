@@ -4,7 +4,11 @@ export function assertEquals<T>(actual: T, expected: T, _msg?: string): void {
   expect(actual).toEqual(expected);
 }
 
-export function assertStringIncludes(actual: string, expected: string, _msg?: string): void {
+export function assertStringIncludes(
+  actual: string,
+  expected: string,
+  _msg?: string,
+): void {
   expect(actual).toContain(expected);
 }
 

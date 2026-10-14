@@ -5,14 +5,14 @@ import { Command } from "commander";
 import { DatadogMonitor, MigrationMapping } from "../types/index.ts";
 import { getServiceRegexForProvider } from "../utils/regex.ts";
 import { AnalyzeCommandOptions } from "../types/cli.ts";
-import { 
+import {
   CommandOptions,
   createDatadogService,
   setupAuthOptions,
   setupFilterOptions,
   createSpinner,
   withErrorHandling,
-  getProviderInfo
+  getProviderInfo,
 } from "../utils/command.ts";
 import { loadConfig } from "../utils/config.ts";
 
@@ -24,33 +24,34 @@ export function registerAnalyzeCommand(program: Command): void {
   // Add standard options
   setupAuthOptions(command);
   setupFilterOptions(command);
-  
+
   // Add required config option
   command.requiredOption(
     CommandOptions.config.flag,
-    CommandOptions.config.description
+    CommandOptions.config.description,
   );
-  
+
   // Add analyze-specific options
   command.option(
     CommandOptions.showMonitors.flag,
-    CommandOptions.showMonitors.description
+    CommandOptions.showMonitors.description,
   );
-  
+
   // Set command action
   command.action(
     withErrorHandling(async (options: AnalyzeCommandOptions) => {
       // Load config for provider info
       const config = loadConfig(options.config);
       const mappings = config.mappings;
-      
+
       // Get provider information
-      const { source: providerSource, displayName: providerName } = getProviderInfo(config);
-      
+      const { source: providerSource, displayName: providerName } =
+        getProviderInfo(config);
+
       // Create Datadog service
       const datadogService = createDatadogService(options);
       const spinner = createSpinner();
-      
+
       let monitors: DatadogMonitor[];
 
       try {
@@ -81,13 +82,9 @@ export function registerAnalyzeCommand(program: Command): void {
 
       // Show detailed monitor list if requested
       if (options.showMonitors) {
-        displayMonitorDetails(
-          filteredMonitors,
-          providerSource,
-          providerName,
-        );
+        displayMonitorDetails(filteredMonitors, providerSource, providerName);
       }
-    })
+    }),
   );
 }
 
@@ -108,7 +105,7 @@ function filterMonitors(
   if (options.tags) {
     const tags = options.tags.split(",").map((t: string) => t.trim());
     filtered = filtered.filter((monitor) =>
-      tags.some((tag) => monitor.tags.includes(tag))
+      tags.some((tag) => monitor.tags.includes(tag)),
     );
   }
 
@@ -122,7 +119,7 @@ function filterMonitors(
   if (options.message) {
     const messagePattern = new RegExp(options.message, "i");
     filtered = filtered.filter((monitor) =>
-      messagePattern.test(monitor.message)
+      messagePattern.test(monitor.message),
     );
   }
 
@@ -233,21 +230,21 @@ function displayStats(stats: MonitorStats, totalFiltered: number): void {
   const summary = [
     `${kleur.bold("Monitor Analysis Summary")}`,
     ``,
-    `${kleur.bold("Total Monitors:")} ${stats.total} (${
-      getPercentage(stats.total)
-    } of filtered)`,
-    `${
-      kleur.blue(`Using ${stats.provider.displayName}:`)
-    } ${stats.provider.count} (${getPercentage(stats.provider.count)})`,
-    `${kleur.green("Using incident.io:")} ${stats.incidentio.count} (${
-      getPercentage(stats.incidentio.count)
-    })`,
-    `${kleur.yellow("Using Both:")} ${stats.both} (${
-      getPercentage(stats.both)
-    })`,
-    `${kleur.gray("Using Neither:")} ${stats.neither} (${
-      getPercentage(stats.neither)
-    })`,
+    `${kleur.bold("Total Monitors:")} ${stats.total} (${getPercentage(
+      stats.total,
+    )} of filtered)`,
+    `${kleur.blue(
+      `Using ${stats.provider.displayName}:`,
+    )} ${stats.provider.count} (${getPercentage(stats.provider.count)})`,
+    `${kleur.green("Using incident.io:")} ${stats.incidentio.count} (${getPercentage(
+      stats.incidentio.count,
+    )})`,
+    `${kleur.yellow("Using Both:")} ${stats.both} (${getPercentage(
+      stats.both,
+    )})`,
+    `${kleur.gray("Using Neither:")} ${stats.neither} (${getPercentage(
+      stats.neither,
+    )})`,
   ].join("\n");
 
   console.log(
@@ -284,9 +281,9 @@ function displayStats(stats: MonitorStats, totalFiltered: number): void {
 
     for (const [webhook, count] of sortedWebhooks) {
       console.log(
-        `  ${kleur.green(webhook)}: ${count} monitors (${
-          getPercentage(count)
-        })`,
+        `  ${kleur.green(webhook)}: ${count} monitors (${getPercentage(
+          count,
+        )})`,
       );
     }
   }
@@ -491,10 +488,7 @@ function extractMentions(message: string, providerRegex: RegExp): string {
   let result = message;
 
   // Highlight provider mentions
-  result = result.replace(
-    providerRegex,
-    (match) => `${kleur.blue(match)}`,
-  );
+  result = result.replace(providerRegex, (match) => `${kleur.blue(match)}`);
 
   // Highlight incident.io webhooks
   result = result.replace(

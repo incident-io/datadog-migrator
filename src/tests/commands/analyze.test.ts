@@ -70,24 +70,28 @@ test("analyze command - with PagerDuty provider", async () => {
     const monitors = await mockDatadogService.getMonitors();
 
     // Count monitors by category
-    const pdOnly = monitors.filter((m) =>
-      m.message.match(providerRegex) &&
-      !m.message.match(/@webhook-incident-io(-\S+)?/g)
+    const pdOnly = monitors.filter(
+      (m) =>
+        m.message.match(providerRegex) &&
+        !m.message.match(/@webhook-incident-io(-\S+)?/g),
     );
 
-    const incidentioOnly = monitors.filter((m) =>
-      !m.message.match(providerRegex) &&
-      m.message.match(/@webhook-incident-io(-\S+)?/g)
+    const incidentioOnly = monitors.filter(
+      (m) =>
+        !m.message.match(providerRegex) &&
+        m.message.match(/@webhook-incident-io(-\S+)?/g),
     );
 
-    const both = monitors.filter((m) =>
-      m.message.match(providerRegex) &&
-      m.message.match(/@webhook-incident-io(-\S+)?/g)
+    const both = monitors.filter(
+      (m) =>
+        m.message.match(providerRegex) &&
+        m.message.match(/@webhook-incident-io(-\S+)?/g),
     );
 
-    const neither = monitors.filter((m) =>
-      !m.message.match(providerRegex) &&
-      !m.message.match(/@webhook-incident-io(-\S+)?/g)
+    const neither = monitors.filter(
+      (m) =>
+        !m.message.match(providerRegex) &&
+        !m.message.match(/@webhook-incident-io(-\S+)?/g),
     );
 
     // Assert monitor counts
@@ -110,7 +114,7 @@ test("analyze command - with PagerDuty provider", async () => {
         count: pdOnly.length + both.length, // Total monitors with PagerDuty
         services: {
           "api-critical": 1,
-          "database": 1,
+          database: 1,
           "api-non-critical": 1,
         },
       },
@@ -247,24 +251,28 @@ test("analyze command - with Opsgenie provider and unmapped services", async () 
     const monitors = await mockDatadogService.getMonitors();
 
     // Count monitors by category
-    const opsgenieOnly = monitors.filter((m) =>
-      m.message.match(providerRegex) &&
-      !m.message.match(/@webhook-incident-io(-\S+)?/g)
+    const opsgenieOnly = monitors.filter(
+      (m) =>
+        m.message.match(providerRegex) &&
+        !m.message.match(/@webhook-incident-io(-\S+)?/g),
     );
 
-    const incidentioOnly = monitors.filter((m) =>
-      !m.message.match(providerRegex) &&
-      m.message.match(/@webhook-incident-io(-\S+)?/g)
+    const incidentioOnly = monitors.filter(
+      (m) =>
+        !m.message.match(providerRegex) &&
+        m.message.match(/@webhook-incident-io(-\S+)?/g),
     );
 
-    const both = monitors.filter((m) =>
-      m.message.match(providerRegex) &&
-      m.message.match(/@webhook-incident-io(-\S+)?/g)
+    const both = monitors.filter(
+      (m) =>
+        m.message.match(providerRegex) &&
+        m.message.match(/@webhook-incident-io(-\S+)?/g),
     );
 
-    const neither = monitors.filter((m) =>
-      !m.message.match(providerRegex) &&
-      !m.message.match(/@webhook-incident-io(-\S+)?/g)
+    const neither = monitors.filter(
+      (m) =>
+        !m.message.match(providerRegex) &&
+        !m.message.match(/@webhook-incident-io(-\S+)?/g),
     );
 
     // Assert monitor counts
@@ -287,7 +295,7 @@ test("analyze command - with Opsgenie provider and unmapped services", async () 
         count: opsgenieOnly.length + both.length, // Total monitors with Opsgenie
         services: {
           "api-critical": 1,
-          "database": 1,
+          database: 1,
           "new-service": 1, // Unmapped service
           "api-non-critical": 1,
         },
@@ -392,7 +400,7 @@ test("analyze command - with filters", async () => {
 
     // Filter by tag "service:api"
     const apiMonitors = allMonitors.filter((m) =>
-      m.tags.includes("service:api")
+      m.tags.includes("service:api"),
     );
     assertEquals(
       apiMonitors.length,
@@ -402,7 +410,7 @@ test("analyze command - with filters", async () => {
 
     // Filter by name containing "API"
     const nameFilteredMonitors = allMonitors.filter((m) =>
-      new RegExp("API", "i").test(m.name)
+      new RegExp("API", "i").test(m.name),
     );
     assertEquals(
       nameFilteredMonitors.length,
@@ -412,7 +420,7 @@ test("analyze command - with filters", async () => {
 
     // Filter by message containing "pagerduty-api"
     const messageFilteredMonitors = allMonitors.filter((m) =>
-      new RegExp("pagerduty-api", "i").test(m.message)
+      new RegExp("pagerduty-api", "i").test(m.message),
     );
     assertEquals(
       messageFilteredMonitors.length,

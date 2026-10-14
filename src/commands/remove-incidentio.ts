@@ -5,16 +5,16 @@ import { Command } from "commander";
 import { MigrationType } from "../types/index.ts";
 import { prepareFilterOptions } from "../types/prepareFilterOptions.ts";
 import { MigrationCommandOptions } from "../types/cli.ts";
-import { 
+import {
   CommandOptions,
-  createDatadogService, 
+  createDatadogService,
   createMigrationService,
   setupAuthOptions,
   setupFilterOptions,
   setupExecutionOptions,
   createSpinner,
   withErrorHandling,
-  displayMigrationResults
+  displayMigrationResults,
 } from "../utils/command.ts";
 
 export function registerRemoveIncidentioCommand(program: Command): void {
@@ -26,13 +26,13 @@ export function registerRemoveIncidentioCommand(program: Command): void {
   setupAuthOptions(command);
   setupFilterOptions(command);
   setupExecutionOptions(command);
-  
+
   // Add required config option
   command.requiredOption(
     CommandOptions.config.flag,
-    CommandOptions.config.description
+    CommandOptions.config.description,
   );
-  
+
   // Set command action
   command.action(
     withErrorHandling(async (options: MigrationCommandOptions) => {
@@ -44,20 +44,21 @@ export function registerRemoveIncidentioCommand(program: Command): void {
       const { migrationService } = createMigrationService(
         datadogService,
         options.config,
-        dryRunMode
+        dryRunMode,
       );
-      
+
       const spinner = createSpinner();
 
       // Confirm action if not in dry run mode
       if (!dryRunMode) {
         spinner.stop();
-        
+
         const { confirmed } = await inquirer.prompt([
           {
             type: "confirm",
             name: "confirmed",
-            message: "This will remove all incident.io webhooks from monitors. Continue?",
+            message:
+              "This will remove all incident.io webhooks from monitors. Continue?",
             default: false,
           },
         ]);
@@ -66,7 +67,7 @@ export function registerRemoveIncidentioCommand(program: Command): void {
           console.log(kleur.yellow("Operation cancelled."));
           process.exit(0);
         }
-        
+
         spinner.start("Connecting to Datadog API");
       }
 
@@ -74,7 +75,7 @@ export function registerRemoveIncidentioCommand(program: Command): void {
       spinner.start(
         dryRunMode
           ? "Simulating removal..."
-          : "Removing incident.io webhooks..."
+          : "Removing incident.io webhooks...",
       );
 
       // Prepare filter options if specified
@@ -88,6 +89,6 @@ export function registerRemoveIncidentioCommand(program: Command): void {
       });
 
       displayMigrationResults(spinner, "remove", result, options);
-    })
+    }),
   );
 }

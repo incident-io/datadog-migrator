@@ -120,14 +120,14 @@ export class MigrationService {
 
   private getTeamForProviderService(service: string): string | undefined {
     const provider = this.incidentioConfig.source || "pagerduty"; // Default to PagerDuty if not specified
-    
+
     // Find mapping based on provider
-    const mapping = this.mappings.find((m) => 
-      provider === "opsgenie" 
-        ? m.opsgenieService === service 
-        : m.pagerdutyService === service
+    const mapping = this.mappings.find((m) =>
+      provider === "opsgenie"
+        ? m.opsgenieService === service
+        : m.pagerdutyService === service,
     );
-    
+
     debug(
       `Looking up team for ${provider} service "${service}": ${
         mapping?.incidentioTeam ?? "not found"
@@ -146,13 +146,19 @@ export class MigrationService {
 
   private getMappingForService(service: string): MigrationMapping {
     const provider = this.incidentioConfig.source || "pagerduty";
-    
+
     if (provider === "opsgenie") {
-      return this.mappings.find((m) => m.opsgenieService === service) ||
-        { opsgenieService: service };
+      return (
+        this.mappings.find((m) => m.opsgenieService === service) || {
+          opsgenieService: service,
+        }
+      );
     } else {
-      return this.mappings.find((m) => m.pagerdutyService === service) ||
-        { pagerdutyService: service };
+      return (
+        this.mappings.find((m) => m.pagerdutyService === service) || {
+          pagerdutyService: service,
+        }
+      );
     }
   }
 
@@ -229,12 +235,14 @@ export class MigrationService {
     // Check if all services have valid mappings
     const mappedServices = new Map<string, string | null | undefined>(
       this.mappings
-        .filter((m) => provider === "opsgenie" ? m.opsgenieService : m.pagerdutyService)
+        .filter((m) =>
+          provider === "opsgenie" ? m.opsgenieService : m.pagerdutyService,
+        )
         .map((m) => [
-          provider === "opsgenie" 
-            ? m.opsgenieService as string 
-            : m.pagerdutyService as string, 
-          m.incidentioTeam
+          provider === "opsgenie"
+            ? (m.opsgenieService as string)
+            : (m.pagerdutyService as string),
+          m.incidentioTeam,
         ]),
     );
 
@@ -266,7 +274,8 @@ export class MigrationService {
     // Team mappings are required in two scenarios:
     // 1. When using team-specific webhooks
     // 2. When using a single webhook but with addTeamTags enabled
-    const requireTeamMappings = this.incidentioConfig.webhookPerTeam ||
+    const requireTeamMappings =
+      this.incidentioConfig.webhookPerTeam ||
       this.incidentioConfig.addTeamTags === true;
 
     // For validation to pass:
@@ -274,7 +283,8 @@ export class MigrationService {
     // - If team mappings are required, we also need:
     //   - No null mappings
     //   - No invalid team names
-    const valid = unmappedServices.length === 0 &&
+    const valid =
+      unmappedServices.length === 0 &&
       (!requireTeamMappings ||
         (nullMappings.length === 0 &&
           Object.keys(invalidTeamNames).length === 0));
@@ -307,17 +317,19 @@ export class MigrationService {
       if (!validationResults.valid && !options.dryRun) {
         if (validationResults.unmappedServices.length > 0) {
           const provider = this.incidentioConfig.source || "pagerduty";
-          const providerName = provider === "opsgenie" ? "Opsgenie" : "PagerDuty";
+          const providerName =
+            provider === "opsgenie" ? "Opsgenie" : "PagerDuty";
           throw new Error(
-            `Missing mappings for ${providerName} services: ${
-              validationResults.unmappedServices.join(", ")
-            }\n\n` +
+            `Missing mappings for ${providerName} services: ${validationResults.unmappedServices.join(
+              ", ",
+            )}\n\n` +
               `Please add these services to your config file before migrating.`,
           );
         }
 
         // Both webhook-per-team and addTeamTags scenarios require proper team assignments
-        const requiresTeamMappings = this.incidentioConfig.webhookPerTeam ||
+        const requiresTeamMappings =
+          this.incidentioConfig.webhookPerTeam ||
           this.incidentioConfig.addTeamTags;
 
         if (validationResults.nullMappings.length > 0 && requiresTeamMappings) {
@@ -326,12 +338,13 @@ export class MigrationService {
             : "When adding team tags based on mappings";
 
           const provider = this.incidentioConfig.source || "pagerduty";
-          const providerName = provider === "opsgenie" ? "Opsgenie" : "PagerDuty";
+          const providerName =
+            provider === "opsgenie" ? "Opsgenie" : "PagerDuty";
           throw new Error(
             `${contextMessage}, all ${providerName} services must have team assignments.\n` +
-              `Missing team assignments for: ${
-                validationResults.nullMappings.join(", ")
-              }\n\n` +
+              `Missing team assignments for: ${validationResults.nullMappings.join(
+                ", ",
+              )}\n\n` +
               `Please edit your config file to assign incident.io teams to these ${providerName} services before migrating.\n`,
           );
         }
@@ -346,12 +359,13 @@ export class MigrationService {
             : "When adding team tags based on mappings";
 
           const provider = this.incidentioConfig.source || "pagerduty";
-          const providerName = provider === "opsgenie" ? "Opsgenie" : "PagerDuty";
+          const providerName =
+            provider === "opsgenie" ? "Opsgenie" : "PagerDuty";
           throw new Error(
             `${contextMessage}, team names must be in a valid format (lowercase alphanumeric with hyphens).\n` +
-              `Invalid team names for services:\n${
-                validationResults.invalidTeamNames.join("\n")
-              }\n\n` +
+              `Invalid team names for services:\n${validationResults.invalidTeamNames.join(
+                "\n",
+              )}\n\n` +
               `Please edit your config file to use valid team names for these ${providerName} services.\n`,
           );
         }
@@ -557,9 +571,9 @@ export class MigrationService {
       case MigrationType.ADD_INCIDENTIO_WEBHOOK:
         const providerServices = this.findProviderServices(message);
         debug(
-          `Found ${provider} services in monitor ${monitor.id}: ${
-            JSON.stringify(providerServices)
-          }`,
+          `Found ${provider} services in monitor ${monitor.id}: ${JSON.stringify(
+            providerServices,
+          )}`,
         );
 
         if (providerServices.length === 0) {
@@ -576,9 +590,9 @@ export class MigrationService {
         // Check for existing incident.io webhooks
         const existingWebhooks = this.findIncidentioWebhooks(message);
         debug(
-          `Found existing webhooks in monitor ${monitor.id}: ${
-            JSON.stringify(existingWebhooks)
-          }`,
+          `Found existing webhooks in monitor ${monitor.id}: ${JSON.stringify(
+            existingWebhooks,
+          )}`,
         );
 
         if (!options.webhookPerTeam) {
@@ -603,12 +617,14 @@ export class MigrationService {
 
           // Check if we need to add team tags or metadata tags when using single webhook
           if (
-            (!this.incidentioConfig.webhookPerTeam) &&
+            !this.incidentioConfig.webhookPerTeam &&
             (this.incidentioConfig.addTeamTags ||
               providerServices.some((service) => {
                 const mapping = this.getMappingForService(service);
-                return mapping.additionalMetadata &&
-                  Object.keys(mapping.additionalMetadata).length > 0;
+                return (
+                  mapping.additionalMetadata &&
+                  Object.keys(mapping.additionalMetadata).length > 0
+                );
               }))
           ) {
             let tagsUpdated = false;
@@ -632,11 +648,9 @@ export class MigrationService {
 
               // Always add additional metadata as tags if present
               if (mapping.additionalMetadata) {
-                for (
-                  const [key, value] of Object.entries(
-                    mapping.additionalMetadata,
-                  )
-                ) {
+                for (const [key, value] of Object.entries(
+                  mapping.additionalMetadata,
+                )) {
                   const metadataTag = `${key}:${value}`;
                   if (!monitorTags.includes(metadataTag)) {
                     monitorTags.push(metadataTag);
@@ -693,8 +707,8 @@ export class MigrationService {
           // Calculate expected webhooks based on mappings
           const expectedWebhooks = new Set<string>();
           for (const service of providerServices) {
-            const mapping = this.mappings.find((m) =>
-              m.pagerdutyService === service
+            const mapping = this.mappings.find(
+              (m) => m.pagerdutyService === service,
             );
             const team = mapping?.incidentioTeam ?? undefined;
             const webhookName = this.getWebhookNameForTeam(team);
@@ -723,17 +737,18 @@ export class MigrationService {
           }
 
           debug(
-            `Expected webhooks for monitor ${monitor.id}: ${
-              [...expectedWebhooks].join(", ")
-            }`,
+            `Expected webhooks for monitor ${monitor.id}: ${[
+              ...expectedWebhooks,
+            ].join(", ")}`,
           );
 
           // Check if existing webhooks match expected ones
           const existingWebhooksSet = new Set(existingWebhooks);
-          const needsUpdate = existingWebhooks.length === 0 || // No webhooks yet
+          const needsUpdate =
+            existingWebhooks.length === 0 || // No webhooks yet
             existingWebhooksSet.size !== expectedWebhooks.size || // Different number of webhooks
             ![...expectedWebhooks].every((webhook) =>
-              existingWebhooksSet.has(webhook)
+              existingWebhooksSet.has(webhook),
             ); // Different webhooks
 
           if (needsUpdate) {
@@ -814,9 +829,9 @@ export class MigrationService {
 
     if (updated && !dryRun) {
       const debugMessage = tagsAfter
-        ? `EXECUTING UPDATE - Attempting to update monitor ${monitor.id} with message: "${newMessage}" and tags: ${
-          JSON.stringify(tagsAfter)
-        }`
+        ? `EXECUTING UPDATE - Attempting to update monitor ${monitor.id} with message: "${newMessage}" and tags: ${JSON.stringify(
+            tagsAfter,
+          )}`
         : `EXECUTING UPDATE - Attempting to update monitor ${monitor.id} with message: "${newMessage}"`;
       debug(debugMessage);
       try {

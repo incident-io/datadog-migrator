@@ -1,6 +1,10 @@
 import { test } from "bun:test";
 import { assertEquals } from "./utils/asserts.ts";
-import { PAGERDUTY_SERVICE_REGEX, OPSGENIE_SERVICE_REGEX, getServiceRegexForProvider } from "../utils/regex.ts";
+import {
+  PAGERDUTY_SERVICE_REGEX,
+  OPSGENIE_SERVICE_REGEX,
+  getServiceRegexForProvider,
+} from "../utils/regex.ts";
 
 test("PAGERDUTY_SERVICE_REGEX extracts service name correctly", () => {
   // Test regular service name
@@ -22,7 +26,8 @@ test("PAGERDUTY_SERVICE_REGEX extracts service name correctly", () => {
   assertEquals(templateMatches2[0][1], "MyServiceCritical");
 
   // Test multiple instances
-  const multiCase = "Alert @pagerduty-Service1 and also @pagerduty-Service2{{/is_warning}}";
+  const multiCase =
+    "Alert @pagerduty-Service1 and also @pagerduty-Service2{{/is_warning}}";
   const multiMatches = [...multiCase.matchAll(PAGERDUTY_SERVICE_REGEX)];
   assertEquals(multiMatches.length, 2);
   assertEquals(multiMatches[0][1], "Service1");
@@ -38,10 +43,12 @@ test("PAGERDUTY_SERVICE_REGEX handles special characters in service names", () =
 
   // Test with underscores
   const underscoreCase = "@pagerduty-Service_With_Underscores";
-  const underscoreMatches = [...underscoreCase.matchAll(PAGERDUTY_SERVICE_REGEX)];
+  const underscoreMatches = [
+    ...underscoreCase.matchAll(PAGERDUTY_SERVICE_REGEX),
+  ];
   assertEquals(underscoreMatches.length, 1);
   assertEquals(underscoreMatches[0][1], "Service_With_Underscores");
-  
+
   // Test with numbers
   const numericCase = "@pagerduty-123NumericService";
   const numericMatches = [...numericCase.matchAll(PAGERDUTY_SERVICE_REGEX)];
@@ -63,7 +70,8 @@ test("OPSGENIE_SERVICE_REGEX extracts service name correctly", () => {
   assertEquals(templateMatches[0][1], "MyService");
 
   // Test multiple instances
-  const multiCase = "Alert @opsgenie-Team1 and also @opsgenie-Team2{{/is_warning}}";
+  const multiCase =
+    "Alert @opsgenie-Team1 and also @opsgenie-Team2{{/is_warning}}";
   const multiMatches = [...multiCase.matchAll(OPSGENIE_SERVICE_REGEX)];
   assertEquals(multiMatches.length, 2);
   assertEquals(multiMatches[0][1], "Team1");
@@ -79,10 +87,12 @@ test("OPSGENIE_SERVICE_REGEX handles special characters in service names", () =>
 
   // Test with underscores
   const underscoreCase = "@opsgenie-Service_With_Underscores";
-  const underscoreMatches = [...underscoreCase.matchAll(OPSGENIE_SERVICE_REGEX)];
+  const underscoreMatches = [
+    ...underscoreCase.matchAll(OPSGENIE_SERVICE_REGEX),
+  ];
   assertEquals(underscoreMatches.length, 1);
   assertEquals(underscoreMatches[0][1], "Service_With_Underscores");
-  
+
   // Test with numbers
   const numericCase = "@opsgenie-123NumericService";
   const numericMatches = [...numericCase.matchAll(OPSGENIE_SERVICE_REGEX)];
@@ -94,11 +104,11 @@ test("getServiceRegexForProvider returns correct regex", () => {
   // Test for PagerDuty
   const pdRegex = getServiceRegexForProvider("pagerduty");
   assertEquals(pdRegex, PAGERDUTY_SERVICE_REGEX);
-  
+
   // Test for Opsgenie
   const ogRegex = getServiceRegexForProvider("opsgenie");
   assertEquals(ogRegex, OPSGENIE_SERVICE_REGEX);
-  
+
   // Test for default (should return PagerDuty)
   const defaultRegex = getServiceRegexForProvider("unknown");
   assertEquals(defaultRegex, PAGERDUTY_SERVICE_REGEX);

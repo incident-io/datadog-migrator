@@ -56,14 +56,14 @@ export const CommandOptions = {
     description: "Datadog App key",
     defaultEnv: "DATADOG_APP_KEY",
   },
-  
+
   // Config option
   config: {
     flag: "-c, --config <path>",
     description: "Path to config file",
     required: true,
   },
-  
+
   // Filter options
   tags: {
     flag: "-t, --tags <tags>",
@@ -77,7 +77,7 @@ export const CommandOptions = {
     flag: "--message <pattern>",
     description: "Filter monitors by message pattern",
   },
-  
+
   // Execution mode options
   dryRun: {
     flag: "-d, --dry-run",
@@ -88,13 +88,13 @@ export const CommandOptions = {
     description: "Show detailed output including unchanged monitors",
     defaultValue: true,
   },
-  
+
   // Analyze-specific options
   showMonitors: {
     flag: "--show-monitors",
     description: "Show detailed list of monitors",
   },
-  
+
   // Init-specific options
   path: {
     flag: "-p, --path <path>",

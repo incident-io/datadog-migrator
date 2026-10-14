@@ -10,7 +10,6 @@ import { MigrationMapping } from "../types/index.ts";
 import { getServiceRegexForProvider } from "../utils/regex.ts";
 import { Command } from "commander";
 
-
 export function registerInitConfigCommand(program: Command): void {
   program
     .command("init")
@@ -31,9 +30,7 @@ export function registerInitConfigCommand(program: Command): void {
       "./config.json",
     )
     .action(
-      async (
-        options: { path: string; apiKey: string; appKey: string },
-      ) => {
+      async (options: { path: string; apiKey: string; appKey: string }) => {
         try {
           // Check if the file already exists
           const configPath = path.resolve(options.path);
@@ -44,7 +41,8 @@ export function registerInitConfigCommand(program: Command): void {
                 `File ${options.path} already exists. Overwrite? (y/N)`,
               );
               const answer = prompt("> ");
-              const overwrite = answer?.toLowerCase() === "y" ||
+              const overwrite =
+                answer?.toLowerCase() === "y" ||
                 answer?.toLowerCase() === "yes";
 
               if (!overwrite) {
@@ -62,7 +60,9 @@ export function registerInitConfigCommand(program: Command): void {
           // Datadog credentials will be provided as CLI arguments when running commands
 
           // Ask which provider they are migrating from
-          const { provider }: {
+          const {
+            provider,
+          }: {
             provider: "pagerduty" | "opsgenie";
           } = await inquirer.prompt([
             {
@@ -237,9 +237,8 @@ export function registerInitConfigCommand(program: Command): void {
             defaultConfig.incidentioConfig.webhookToken = cleanToken;
           }
 
-          const providerName = provider === "opsgenie"
-            ? "Opsgenie"
-            : "PagerDuty";
+          const providerName =
+            provider === "opsgenie" ? "Opsgenie" : "PagerDuty";
 
           console.log(
             kleur.blue(
@@ -258,7 +257,9 @@ We'll scan for ${providerName} services and add them to your config file.`,
 
           try {
             const dirPath = path.dirname(configPath);
-            const dirExists = await fs.promises.stat(dirPath).catch(() => false);
+            const dirExists = await fs.promises
+              .stat(dirPath)
+              .catch(() => false);
             if (!dirExists) {
               await fs.promises.mkdir(dirPath, { recursive: true });
             }
@@ -301,29 +302,29 @@ We'll scan for ${providerName} services and add them to your config file.`,
               if (detectedServices.length > 0) {
                 // Create mappings for detected services (excluding ones already manually added)
                 const existingServices = new Set(
-                  defaultConfig.mappings.map(
-                    (m: MigrationMapping) =>
-                      provider === "opsgenie"
-                        ? m.opsgenieService
-                        : m.pagerdutyService,
+                  defaultConfig.mappings.map((m: MigrationMapping) =>
+                    provider === "opsgenie"
+                      ? m.opsgenieService
+                      : m.pagerdutyService,
                   ),
                 );
                 const newMappings = [];
 
                 for (const service of detectedServices) {
                   if (!existingServices.has(service)) {
-                    const mappingKey = provider === "opsgenie"
-                      ? "opsgenieService"
-                      : "pagerdutyService";
+                    const mappingKey =
+                      provider === "opsgenie"
+                        ? "opsgenieService"
+                        : "pagerdutyService";
 
-                     // Add an example of additionalMetadata for the first service
+                    // Add an example of additionalMetadata for the first service
                     if (newMappings.length === 0) {
                       defaultConfig.mappings.push({
                         [mappingKey]: service,
                         incidentioTeam: null, // Placeholder for user to fill in
                         additionalMetadata: {
                           // Example metadata - useful for differentiating similar services
-                          "service": service,
+                          service: service,
                         },
                       });
                     } else {

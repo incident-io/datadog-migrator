@@ -5,7 +5,10 @@ import { test } from "bun:test";
 import { assertEquals } from "../utils/asserts.ts";
 import { createDefaultConfig } from "../../utils/config.ts";
 import { MockDatadogService } from "../utils/mock-datadog-service.ts";
-import { createOpsgenieMonitor, createPagerDutyMonitor } from "../utils/test-utils.ts";
+import {
+  createOpsgenieMonitor,
+  createPagerDutyMonitor,
+} from "../utils/test-utils.ts";
 import { withMockedEnv } from "../utils/test-stub.ts";
 
 /**
@@ -116,8 +119,8 @@ test("init-config - PagerDuty service detection", async () => {
           pagerdutyService: service,
           incidentioTeam: null,
           additionalMetadata: {
-            "priority": "high",
-            "environment": "production",
+            priority: "high",
+            environment: "production",
           },
         });
       } else {
@@ -231,8 +234,8 @@ test("init-config - Opsgenie service detection", async () => {
           opsgenieService: service,
           incidentioTeam: null,
           additionalMetadata: {
-            "priority": "high",
-            "environment": "production",
+            priority: "high",
+            environment: "production",
           },
         });
       } else {

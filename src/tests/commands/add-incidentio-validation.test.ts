@@ -13,7 +13,11 @@ import { MigrationService } from "../../services/migration.ts";
 import type { DatadogService } from "../../services/datadog.ts";
 import { MigrationType } from "../../types/index.ts";
 import { MockDatadogService } from "../utils/mock-datadog-service.ts";
-import { createOpsgenieMonitor, createPagerDutyMonitor, createTestConfig } from "../utils/test-utils.ts";
+import {
+  createOpsgenieMonitor,
+  createPagerDutyMonitor,
+  createTestConfig,
+} from "../utils/test-utils.ts";
 import { withMockedEnv } from "../utils/test-stub.ts";
 
 /**

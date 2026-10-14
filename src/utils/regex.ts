@@ -16,5 +16,7 @@ export const OPSGENIE_SERVICE_REGEX = /@opsgenie-([\w\-_]+)/g;
  * @returns RegExp pattern for the specified provider
  */
 export function getServiceRegexForProvider(provider: string): RegExp {
-  return provider === 'opsgenie' ? OPSGENIE_SERVICE_REGEX : PAGERDUTY_SERVICE_REGEX;
+  return provider === "opsgenie"
+    ? OPSGENIE_SERVICE_REGEX
+    : PAGERDUTY_SERVICE_REGEX;
 }

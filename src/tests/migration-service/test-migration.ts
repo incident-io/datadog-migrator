@@ -2,7 +2,12 @@
  * Custom test implementation for MigrationService tests
  */
 import { MigrationService } from "../../services/migration.ts";
-import { DatadogMonitor, IncidentioConfig, MigrationMapping, MigrationType } from "../../types/index.ts";
+import {
+  DatadogMonitor,
+  IncidentioConfig,
+  MigrationMapping,
+  MigrationType,
+} from "../../types/index.ts";
 import { assertEquals } from "../utils/asserts.ts";
 import { withMockedEnv } from "../utils/test-stub.ts";
 
@@ -69,14 +74,12 @@ export class MockDatadogService {
     return this._webhooks[name] || null;
   }
 
-  async createWebhook(
-    webhook: {
-      name: string;
-      url: string;
-      payload: string;
-      customHeaders?: string;
-    },
-  ): Promise<void> {
+  async createWebhook(webhook: {
+    name: string;
+    url: string;
+    payload: string;
+    customHeaders?: string;
+  }): Promise<void> {
     this.apiCalls.createWebhook.push({
       name: webhook.name,
       url: webhook.url,

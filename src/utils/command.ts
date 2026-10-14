@@ -55,9 +55,10 @@ export function createMigrationService(
 /**
  * Get provider information from config (standardized function)
  */
-export function getProviderInfo(
-  config: MigrationConfig,
-): { source: string; displayName: string } {
+export function getProviderInfo(config: MigrationConfig): {
+  source: string;
+  displayName: string;
+} {
   const source = config.incidentioConfig.source || "pagerduty";
   const displayName = source === "opsgenie" ? "Opsgenie" : "PagerDuty";
 
@@ -86,18 +87,9 @@ export function setupAuthOptions(command: Command): Command {
  */
 export function setupFilterOptions(command: Command): Command {
   return command
-    .option(
-      CommandOptions.tags.flag,
-      CommandOptions.tags.description,
-    )
-    .option(
-      CommandOptions.name.flag,
-      CommandOptions.name.description,
-    )
-    .option(
-      CommandOptions.message.flag,
-      CommandOptions.message.description,
-    );
+    .option(CommandOptions.tags.flag, CommandOptions.tags.description)
+    .option(CommandOptions.name.flag, CommandOptions.name.description)
+    .option(CommandOptions.message.flag, CommandOptions.message.description);
 }
 
 /**
@@ -105,10 +97,7 @@ export function setupFilterOptions(command: Command): Command {
  */
 export function setupExecutionOptions(command: Command): Command {
   return command
-    .option(
-      CommandOptions.dryRun.flag,
-      CommandOptions.dryRun.description,
-    )
+    .option(CommandOptions.dryRun.flag, CommandOptions.dryRun.description)
     .option(
       CommandOptions.verbose.flag,
       CommandOptions.verbose.description,
@@ -126,9 +115,7 @@ export function createSpinner(message: string = "Connecting to Datadog API") {
 /**
  * Standard command callback wrapper to handle errors
  */
-export function withErrorHandling<T>(
-  callback: (options: T) => Promise<void>,
-) {
+export function withErrorHandling<T>(callback: (options: T) => Promise<void>) {
   return async (options: T): Promise<void> => {
     try {
       await callback(options);
@@ -153,9 +140,7 @@ export const displayMigrationResults = (
     verbose?: boolean;
   },
 ): void => {
-  spinner.succeed(
-    options.dryRun ? "Simulation complete" : "Update complete",
-  );
+  spinner.succeed(options.dryRun ? "Simulation complete" : "Update complete");
 
   // Show results
   console.log(kleur.bold("\nResults:"));
