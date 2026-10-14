@@ -1,7 +1,8 @@
-import { assertEquals } from "https://deno.land/std/testing/asserts.ts";
+import { test } from "bun:test";
+import { assertEquals } from "./utils/asserts.ts";
 import { PAGERDUTY_SERVICE_REGEX, OPSGENIE_SERVICE_REGEX, getServiceRegexForProvider } from "../utils/regex.ts";
 
-Deno.test("PAGERDUTY_SERVICE_REGEX extracts service name correctly", () => {
+test("PAGERDUTY_SERVICE_REGEX extracts service name correctly", () => {
   // Test regular service name
   const basicCase = "@pagerduty-ServiceName";
   const basicMatches = [...basicCase.matchAll(PAGERDUTY_SERVICE_REGEX)];
@@ -28,7 +29,7 @@ Deno.test("PAGERDUTY_SERVICE_REGEX extracts service name correctly", () => {
   assertEquals(multiMatches[1][1], "Service2");
 });
 
-Deno.test("PAGERDUTY_SERVICE_REGEX handles special characters in service names", () => {
+test("PAGERDUTY_SERVICE_REGEX handles special characters in service names", () => {
   // Test with hyphens
   const hyphenCase = "@pagerduty-Service-With-Hyphens";
   const hyphenMatches = [...hyphenCase.matchAll(PAGERDUTY_SERVICE_REGEX)];
@@ -48,7 +49,7 @@ Deno.test("PAGERDUTY_SERVICE_REGEX handles special characters in service names",
   assertEquals(numericMatches[0][1], "123NumericService");
 });
 
-Deno.test("OPSGENIE_SERVICE_REGEX extracts service name correctly", () => {
+test("OPSGENIE_SERVICE_REGEX extracts service name correctly", () => {
   // Test regular service name
   const basicCase = "@opsgenie-ServiceName";
   const basicMatches = [...basicCase.matchAll(OPSGENIE_SERVICE_REGEX)];
@@ -69,7 +70,7 @@ Deno.test("OPSGENIE_SERVICE_REGEX extracts service name correctly", () => {
   assertEquals(multiMatches[1][1], "Team2");
 });
 
-Deno.test("OPSGENIE_SERVICE_REGEX handles special characters in service names", () => {
+test("OPSGENIE_SERVICE_REGEX handles special characters in service names", () => {
   // Test with hyphens
   const hyphenCase = "@opsgenie-Service-With-Hyphens";
   const hyphenMatches = [...hyphenCase.matchAll(OPSGENIE_SERVICE_REGEX)];
@@ -89,7 +90,7 @@ Deno.test("OPSGENIE_SERVICE_REGEX handles special characters in service names", 
   assertEquals(numericMatches[0][1], "123NumericService");
 });
 
-Deno.test("getServiceRegexForProvider returns correct regex", () => {
+test("getServiceRegexForProvider returns correct regex", () => {
   // Test for PagerDuty
   const pdRegex = getServiceRegexForProvider("pagerduty");
   assertEquals(pdRegex, PAGERDUTY_SERVICE_REGEX);

@@ -1,6 +1,6 @@
 import kleur from "kleur";
 import inquirer from "inquirer";
-import Denomander from "https://deno.land/x/denomander@0.9.3/src/Denomander.ts";
+import { Command } from "commander";
 
 import { MigrationType } from "../types/index.ts";
 import { prepareFilterOptions } from "../types/prepareFilterOptions.ts";
@@ -19,7 +19,7 @@ import {
   displayMigrationResults
 } from "../utils/command.ts";
 
-export function registerRemoveProviderCommand(program: Denomander): void {
+export function registerRemoveProviderCommand(program: Command): void {
   const command = program
     .command("remove-provider")
     .description("Remove PagerDuty or Opsgenie service mentions from monitors");
@@ -42,7 +42,7 @@ export function registerRemoveProviderCommand(program: Denomander): void {
       const datadogService = createDatadogService(options);
 
       // Create migration service and load config
-      const dryRunMode = options["dry-run"] === true;
+      const dryRunMode = options.dryRun === true;
       const { migrationService, config } = createMigrationService(
         datadogService,
         options.config,
@@ -72,7 +72,7 @@ export function registerRemoveProviderCommand(program: Denomander): void {
 
         if (confirmText !== "CONFIRM") {
           console.log(kleur.yellow("Operation cancelled."));
-          Deno.exit(0);
+          process.exit(0);
         }
         
         console.log(kleur.green(`Confirmation received. Proceeding with ${displayName} removal...`));

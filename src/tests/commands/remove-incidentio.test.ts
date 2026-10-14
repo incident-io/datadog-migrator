@@ -1,7 +1,8 @@
+import { test } from "bun:test";
 /**
  * Tests for remove-incidentio command
  */
-import { assertEquals, assertStringIncludes } from "https://deno.land/std@0.171.0/testing/asserts.ts";
+import { assertEquals, assertStringIncludes } from "../utils/asserts.ts";
 import { MigrationService } from "../../services/migration.ts";
 import type { DatadogService } from "../../services/datadog.ts";
 import { MigrationType } from "../../types/index.ts";
@@ -16,7 +17,7 @@ import { withMockedEnv } from "../utils/test-stub.ts";
  * - PagerDuty service mentions are preserved
  * - Only monitors with incident.io webhooks are processed
  */
-Deno.test("remove-incidentio command - single webhook mode", async () => {
+test("remove-incidentio command - single webhook mode", async () => {
   await withMockedEnv(async () => {
     // Create and configure mock service
     const mockDatadogService = new MockDatadogService();
@@ -150,7 +151,7 @@ Deno.test("remove-incidentio command - single webhook mode", async () => {
  * - Only monitors with incident.io webhooks are processed
  * - Different team webhooks are all properly removed
  */
-Deno.test("remove-incidentio command - team webhook mode", async () => {
+test("remove-incidentio command - team webhook mode", async () => {
   await withMockedEnv(async () => {
     // Create and configure mock service
     const mockDatadogService = new MockDatadogService();
@@ -276,7 +277,7 @@ Deno.test("remove-incidentio command - team webhook mode", async () => {
  * - Dry run mode correctly identifies monitors that would be updated
  * - No actual updates are made to the monitors
  */
-Deno.test("remove-incidentio command - dry run mode", async () => {
+test("remove-incidentio command - dry run mode", async () => {
   await withMockedEnv(async () => {
     // Create and configure mock service
     const mockDatadogService = new MockDatadogService();

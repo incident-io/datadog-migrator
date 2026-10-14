@@ -239,17 +239,17 @@ DATADOG_APP_KEY=your_app_key_here
 If you want to build the binaries yourself:
 
 1. Clone the repository
-2. Install [Deno](https://deno.land/#installation) if you don't have it already
+2. Install [Bun](https://bun.sh/docs/installation) if you don't have it already, then run `bun install`
 3. Build the project with:
    ```bash
-   deno task build
+   bun run build
    ```
 4. Or build platform-specific binaries:
    ```bash
-   deno task build:mac      # macOS Intel
-   deno task build:mac-arm  # macOS Apple Silicon
-   deno task build:linux    # Linux
-   deno task build:windows  # Windows
+   bun run build:mac      # macOS Intel
+   bun run build:mac-arm  # macOS Apple Silicon
+   bun run build:linux    # Linux
+   bun run build:windows  # Windows
    ```
 
 The binaries will be available in the `dist` directory.
@@ -258,16 +258,15 @@ The binaries will be available in the `dist` directory.
 
 To create a new release:
 
-1. Update the version in `package.json`
-2. Create a git tag for the version:
+1. Create a git tag for the version:
    ```bash
    git tag v1.0.0  # Replace with your version
    ```
-3. Push the tag to GitHub:
+2. Push the tag to GitHub:
    ```bash
    git push origin v1.0.0
    ```
-4. The GitHub Actions workflow will automatically build binaries and create a release
+3. The GitHub Actions workflow will automatically build binaries and create a release
 
 ## License
 

@@ -1,6 +1,6 @@
 import kleur from "kleur";
 import boxen from "boxen";
-import Denomander from "https://deno.land/x/denomander@0.9.3/src/Denomander.ts";
+import { Command } from "commander";
 
 import { DatadogMonitor, MigrationMapping } from "../types/index.ts";
 import { getServiceRegexForProvider } from "../utils/regex.ts";
@@ -16,7 +16,7 @@ import {
 } from "../utils/command.ts";
 import { loadConfig } from "../utils/config.ts";
 
-export function registerAnalyzeCommand(program: Denomander): void {
+export function registerAnalyzeCommand(program: Command): void {
   const command = program
     .command("analyze")
     .description("Analyze Datadog monitors and validate provider mappings");
@@ -80,7 +80,7 @@ export function registerAnalyzeCommand(program: Denomander): void {
       validateMappings(stats, mappings);
 
       // Show detailed monitor list if requested
-      if (options["show-monitors"]) {
+      if (options.showMonitors) {
         displayMonitorDetails(
           filteredMonitors,
           providerSource,

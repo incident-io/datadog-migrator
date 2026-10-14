@@ -60,10 +60,9 @@ export class MockDatadogService {
   /**
    * Mock implementation of getMonitors
    */
-  // deno-lint-ignore require-await
   public async getMonitors(): Promise<DatadogMonitor[]> {
     try {
-      if (Deno.env.get("DEBUG") === "true") {
+      if (process.env.DEBUG === "true") {
         console.log(
           "getMonitors called, returning:",
           JSON.stringify(this.monitors),
@@ -78,13 +77,12 @@ export class MockDatadogService {
   /**
    * Mock implementation of updateMonitor
    */
-  // deno-lint-ignore require-await
   public async updateMonitor(
     id: number,
     data: Partial<DatadogMonitor>,
   ): Promise<DatadogMonitor> {
     try {
-      if (Deno.env.get("DEBUG") === "true") {
+      if (process.env.DEBUG === "true") {
         console.log(
           `updateMonitor called for id ${id} with data:`,
           JSON.stringify(data),
@@ -120,10 +118,9 @@ export class MockDatadogService {
   /**
    * Mock implementation of getWebhook
    */
-  // deno-lint-ignore require-await
   public async getWebhook(name: string): Promise<DatadogWebhook | null> {
     try {
-      if (Deno.env.get("DEBUG") === "true") {
+      if (process.env.DEBUG === "true") {
         console.log(`getWebhook called for ${name}`);
       }
     } catch (_) {
@@ -136,10 +133,9 @@ export class MockDatadogService {
   /**
    * Mock implementation of createWebhook
    */
-  // deno-lint-ignore require-await
   public async createWebhook(webhook: DatadogWebhook): Promise<void> {
     try {
-      if (Deno.env.get("DEBUG") === "true") {
+      if (process.env.DEBUG === "true") {
         console.log(`createWebhook called for ${webhook.name}`);
       }
     } catch (_) {

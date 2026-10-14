@@ -1,7 +1,8 @@
+import { test } from "bun:test";
 /**
  * Tests for add-incidentio command
  */
-import { assertEquals, assertStringIncludes } from "https://deno.land/std@0.171.0/testing/asserts.ts";
+import { assertEquals, assertStringIncludes } from "../utils/asserts.ts";
 import { MigrationService } from "../../services/migration.ts";
 import type { DatadogService } from "../../services/datadog.ts";
 import { MigrationType } from "../../types/index.ts";
@@ -16,7 +17,7 @@ import { withMockedEnv } from "../utils/test-stub.ts";
  * - Additional metadata is added as tags to the monitors
  * - Team tags are added based on mappings
  */
-Deno.test("add-incidentio command - single webhook mode with additionalMetadata", async () => {
+test("add-incidentio command - single webhook mode with additionalMetadata", async () => {
   await withMockedEnv(async () => {
     // Create and configure mock service
     const mockDatadogService = new MockDatadogService();
@@ -113,7 +114,7 @@ Deno.test("add-incidentio command - single webhook mode with additionalMetadata"
  * - Additional metadata is included in webhook payloads
  * - Monitor messages are updated with the correct team-specific webhook
  */
-Deno.test("add-incidentio command - team webhook mode with additionalMetadata", async () => {
+test("add-incidentio command - team webhook mode with additionalMetadata", async () => {
   await withMockedEnv(async () => {
     // Create and configure mock service
     const mockDatadogService = new MockDatadogService();

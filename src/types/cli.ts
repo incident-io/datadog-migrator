@@ -7,8 +7,8 @@
  */
 export interface BaseCommandOptions {
   // API Authentication options
-  "api-key": string;
-  "app-key": string;
+  apiKey: string;
+  appKey: string;
 
   // Config path
   config: string;
@@ -29,7 +29,7 @@ export interface FilterableCommandOptions extends BaseCommandOptions {
  */
 export interface MigrationCommandOptions extends FilterableCommandOptions {
   // Execution mode options
-  "dry-run"?: boolean;
+  dryRun?: boolean;
   verbose: boolean;
 }
 
@@ -37,15 +37,9 @@ export interface MigrationCommandOptions extends FilterableCommandOptions {
  * Options for analyze command
  */
 export interface AnalyzeCommandOptions extends FilterableCommandOptions {
-  "show-monitors"?: boolean;
+  showMonitors?: boolean;
   verbose?: boolean; // Added for compatibility with withErrorHandling
 }
-
-/**
- * Standard parameter transformer for Denomander
- * Returns the provided value unchanged
- */
-export const identity = (i: string) => i;
 
 /**
  * Command option definitions for consistent option setup
@@ -53,34 +47,34 @@ export const identity = (i: string) => i;
 export const CommandOptions = {
   // Authentication options
   apiKey: {
-    flag: "-k, --api-key",
+    flag: "-k, --api-key <key>",
     description: "Datadog API key",
     defaultEnv: "DATADOG_API_KEY",
   },
   appKey: {
-    flag: "-a, --app-key",
+    flag: "-a, --app-key <key>",
     description: "Datadog App key",
     defaultEnv: "DATADOG_APP_KEY",
   },
   
   // Config option
   config: {
-    flag: "-c, --config",
+    flag: "-c, --config <path>",
     description: "Path to config file",
     required: true,
   },
   
   // Filter options
   tags: {
-    flag: "-t, --tags",
+    flag: "-t, --tags <tags>",
     description: "Filter monitors by tags (comma-separated)",
   },
   name: {
-    flag: "-n, --name",
+    flag: "-n, --name <pattern>",
     description: "Filter monitors by name pattern",
   },
   message: {
-    flag: "--message",
+    flag: "--message <pattern>",
     description: "Filter monitors by message pattern",
   },
   
@@ -103,7 +97,7 @@ export const CommandOptions = {
   
   // Init-specific options
   path: {
-    flag: "-p, --path",
+    flag: "-p, --path <path>",
     description: "Path to save config file",
   },
 };

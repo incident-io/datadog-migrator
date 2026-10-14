@@ -1,3 +1,4 @@
+import { test } from "bun:test";
 /**
  * Tests for the additionalMetadata functionality in MigrationService
  */
@@ -9,7 +10,7 @@ import {
 } from "../utils/test-utils.ts";
 import { MockDatadogService, testAdditionalMetadata } from "./test-migration.ts";
 
-Deno.test("additionalMetadata - single webhook mode adds metadata as tags", async () => {
+test("additionalMetadata - single webhook mode adds metadata as tags", async () => {
   // ARRANGE
   const mockDatadogService = new MockDatadogService();
   
@@ -35,7 +36,7 @@ Deno.test("additionalMetadata - single webhook mode adds metadata as tags", asyn
   await testAdditionalMetadata(mockDatadogService, config, mappings, ["env:prod", "team:api-team", "priority:high", "service:api"], null, null);
 });
 
-Deno.test("additionalMetadata - team webhook mode passes metadata to webhook payload", async () => {
+test("additionalMetadata - team webhook mode passes metadata to webhook payload", async () => {
   // ARRANGE
   const mockDatadogService = new MockDatadogService();
   
@@ -61,7 +62,7 @@ Deno.test("additionalMetadata - team webhook mode passes metadata to webhook pay
   await testAdditionalMetadata(mockDatadogService, config, mappings, undefined, "incident-io-api-team", ["\"priority\": \"high\"", "\"service\": \"api\"", "\"team\": \"api-team\""]);
 });
 
-Deno.test("additionalMetadata - works with Opsgenie services too", async () => {
+test("additionalMetadata - works with Opsgenie services too", async () => {
   // ARRANGE
   const mockDatadogService = new MockDatadogService();
   

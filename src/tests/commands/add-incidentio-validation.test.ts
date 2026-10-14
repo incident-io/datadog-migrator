@@ -1,3 +1,4 @@
+import { test } from "bun:test";
 /**
  * Tests for add-incidentio command validation behavior
  *
@@ -7,7 +8,7 @@
  * 2. When using team-specific webhooks, all mappings must have team assignments
  * 3. When using single webhook with addTeamTags, all mappings must have team assignments
  */
-import { assertEquals, assertRejects } from "https://deno.land/std@0.171.0/testing/asserts.ts";
+import { assertEquals, assertRejects } from "../utils/asserts.ts";
 import { MigrationService } from "../../services/migration.ts";
 import type { DatadogService } from "../../services/datadog.ts";
 import { MigrationType } from "../../types/index.ts";
@@ -21,7 +22,7 @@ import { withMockedEnv } from "../utils/test-stub.ts";
  * - If a PagerDuty service in a monitor doesn't have a mapping, an error is thrown
  * - The error message contains the unmapped service name
  */
-Deno.test("add-incidentio - detects and rejects unmapped PagerDuty services", async () => {
+test("add-incidentio - detects and rejects unmapped PagerDuty services", async () => {
   await withMockedEnv(async () => {
     // Create and configure mock service with an unmapped service
     const mockDatadogService = new MockDatadogService();
@@ -90,7 +91,7 @@ Deno.test("add-incidentio - detects and rejects unmapped PagerDuty services", as
  * - If an Opsgenie service in a monitor doesn't have a mapping, an error is thrown
  * - The error message contains the unmapped service name
  */
-Deno.test("add-incidentio - detects and rejects unmapped Opsgenie services", async () => {
+test("add-incidentio - detects and rejects unmapped Opsgenie services", async () => {
   await withMockedEnv(async () => {
     // Create and configure mock service with an unmapped service
     const mockDatadogService = new MockDatadogService();
@@ -159,7 +160,7 @@ Deno.test("add-incidentio - detects and rejects unmapped Opsgenie services", asy
  * - If in dry run mode, the command doesn't throw an error for unmapped services
  * - The validation results are included in the migration results
  */
-Deno.test("add-incidentio - does not reject unmapped services in dry-run mode", async () => {
+test("add-incidentio - does not reject unmapped services in dry-run mode", async () => {
   await withMockedEnv(async () => {
     // Create and configure mock service with an unmapped service
     const mockDatadogService = new MockDatadogService();
@@ -231,7 +232,7 @@ Deno.test("add-incidentio - does not reject unmapped services in dry-run mode", 
  * - If a team name is null or invalid, an error is thrown when using team-specific webhooks
  * - The error message contains the service with the missing team
  */
-Deno.test("add-incidentio - requires valid team names with team-specific webhooks", async () => {
+test("add-incidentio - requires valid team names with team-specific webhooks", async () => {
   await withMockedEnv(async () => {
     // Create and configure mock service
     const mockDatadogService = new MockDatadogService();
@@ -300,7 +301,7 @@ Deno.test("add-incidentio - requires valid team names with team-specific webhook
  * - If a team name is null or invalid, an error is thrown when using single webhook with addTeamTags enabled
  * - The error message contains the service with the missing team
  */
-Deno.test("add-incidentio - requires valid team names with single webhook and addTeamTags", async () => {
+test("add-incidentio - requires valid team names with single webhook and addTeamTags", async () => {
   await withMockedEnv(async () => {
     // Create and configure mock service
     const mockDatadogService = new MockDatadogService();

@@ -1,6 +1,6 @@
 import kleur from "kleur";
 import inquirer from "inquirer";
-import Denomander from "https://deno.land/x/denomander@0.9.3/src/Denomander.ts";
+import { Command } from "commander";
 
 import { MigrationType } from "../types/index.ts";
 import { prepareFilterOptions } from "../types/prepareFilterOptions.ts";
@@ -17,7 +17,7 @@ import {
   displayMigrationResults
 } from "../utils/command.ts";
 
-export function registerRemoveIncidentioCommand(program: Denomander): void {
+export function registerRemoveIncidentioCommand(program: Command): void {
   const command = program
     .command("remove-incidentio")
     .description("Remove incident.io webhooks from monitors");
@@ -40,7 +40,7 @@ export function registerRemoveIncidentioCommand(program: Denomander): void {
       const datadogService = createDatadogService(options);
 
       // Create migration service and load config
-      const dryRunMode = options["dry-run"] === true;
+      const dryRunMode = options.dryRun === true;
       const { migrationService } = createMigrationService(
         datadogService,
         options.config,
@@ -64,7 +64,7 @@ export function registerRemoveIncidentioCommand(program: Denomander): void {
 
         if (!confirmed) {
           console.log(kleur.yellow("Operation cancelled."));
-          Deno.exit(0);
+          process.exit(0);
         }
         
         spinner.start("Connecting to Datadog API");

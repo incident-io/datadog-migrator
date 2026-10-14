@@ -1,14 +1,16 @@
+import { test } from "bun:test";
 /**
- * Simple test for additionalMetadata functionality using environment stubbing
+ * Test for additionalMetadata functionality with team-specific webhooks
+ * Uses environment stubbing approach
  */
-import { assertEquals } from "https://deno.land/std@0.171.0/testing/asserts.ts";
+import { assertEquals, assertStringIncludes } from "./utils/asserts.ts";
 import { MigrationService } from "../services/migration.ts";
 import { MigrationType } from "../types/index.ts";
 import { createPagerDutyMonitor, createTestConfig, createTestMappings } from "./utils/test-utils.ts";
 import { createMockDatadogService } from "./utils/mock-services.ts";
 import { withMockedEnv } from "./utils/test-stub.ts";
 
-Deno.test("additionalMetadata - simple test", async () => {
+test("additionalMetadata with team-specific webhooks", async () => {
   await withMockedEnv(async () => {
     // Create a mock service
     const mockService = createMockDatadogService();
@@ -24,10 +26,10 @@ Deno.test("additionalMetadata - simple test", async () => {
     // Set up the mock
     mockService.monitors = [monitor];
 
-    // Create test config
+    // Create test config with webhookPerTeam = true
     const config = createTestConfig({
-      webhookPerTeam: false,
-      addTeamTags: true,
+      webhookPerTeam: true,
+      addTeamTags: false, // We're testing webhooks, not tags
       source: "pagerduty",
     });
 
@@ -37,9 +39,9 @@ Deno.test("additionalMetadata - simple test", async () => {
     const mappings = createTestMappings("pagerduty");
     console.log("Test mappings:", JSON.stringify(mappings));
 
-    // Create migration service
+    // Create migration service - cast the mock to any to bypass type checking
     const migrationService = new MigrationService(
-      // deno-lint-ignore no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       mockService as any,
       config,
       mappings,
@@ -50,32 +52,57 @@ Deno.test("additionalMetadata - simple test", async () => {
     console.log("Running migration...");
     const result = await migrationService.migrateMonitors({
       type: MigrationType.ADD_INCIDENTIO_WEBHOOK,
-      webhookPerTeam: false,
+      webhookPerTeam: true,
     });
 
     console.log("Migration result:", JSON.stringify(result));
     console.log("Update calls made:", JSON.stringify(mockService.updateCalls));
+    console.log(
+      "Webhook calls made:",
+      JSON.stringify(mockService.webhookCalls),
+    );
 
-    // Verify the calls
+    // Verify the update calls
     assertEquals(
       mockService.updateCalls.length,
       1,
       "Should make one update call",
     );
 
-    // Check that tags were added correctly
+    // Verify the webhook calls
+    assertEquals(
+      mockService.webhookCalls.length,
+      1,
+      "Should create one webhook",
+    );
+
+    // Check that the webhook payload includes the additional metadata
+    const webhook = mockService.webhookCalls[0];
+    assertEquals(
+      webhook.name,
+      "incident-io-api-team",
+      "Webhook should have team name",
+    );
+
+    // Verify the payload contains our metadata
+    assertStringIncludes(
+      webhook.payload,
+      '"priority": "high"',
+      "Webhook payload should include priority metadata",
+    );
+    assertStringIncludes(
+      webhook.payload,
+      '"service": "api"',
+      "Webhook payload should include service metadata",
+    );
+
+    // Check that the monitor message was updated with the team-specific webhook
     const updateCall = mockService.updateCalls[0];
     assertEquals(updateCall.id, 1, "Should update the correct monitor");
-
-    // Sort the tags for consistent comparison
-    const expectedTags = [
-      "env:prod",
-      "team:api-team",
-      "priority:high",
-      "service:api",
-    ].sort();
-    const actualTags = [...(updateCall.data.tags || [])].sort();
-
-    assertEquals(actualTags, expectedTags, "Tags should include metadata");
+    assertStringIncludes(
+      updateCall.data.message as string,
+      "@webhook-incident-io-api-team",
+      "Monitor message should include team-specific webhook",
+    );
   });
 });

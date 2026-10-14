@@ -1,7 +1,8 @@
+import { test } from "bun:test";
 /**
  * Tests for analyze command
  */
-import { assertEquals } from "https://deno.land/std@0.171.0/testing/asserts.ts";
+import { assertEquals } from "../utils/asserts.ts";
 import { MockDatadogService } from "../utils/mock-services.ts";
 import {
   createIncidentioMonitor,
@@ -22,7 +23,7 @@ import { getServiceRegexForProvider } from "../../utils/regex.ts";
  * - Analysis correctly counts monitors with PagerDuty, incident.io, both, or neither
  * - Mapping validation works correctly
  */
-Deno.test("analyze command - with PagerDuty provider", async () => {
+test("analyze command - with PagerDuty provider", async () => {
   await withMockedEnv(async () => {
     // Create and configure mock service
     const mockDatadogService = new MockDatadogService();
@@ -198,7 +199,7 @@ Deno.test("analyze command - with PagerDuty provider", async () => {
  * - Analysis correctly counts monitors with Opsgenie, incident.io, both, or neither
  * - Mapping validation works correctly with missing mappings
  */
-Deno.test("analyze command - with Opsgenie provider and unmapped services", async () => {
+test("analyze command - with Opsgenie provider and unmapped services", async () => {
   await withMockedEnv(async () => {
     // Create and configure mock service
     const mockDatadogService = new MockDatadogService();
@@ -338,7 +339,7 @@ Deno.test("analyze command - with Opsgenie provider and unmapped services", asyn
  * - The name filter correctly filters monitors
  * - The message filter correctly filters monitors
  */
-Deno.test("analyze command - with filters", async () => {
+test("analyze command - with filters", async () => {
   await withMockedEnv(async () => {
     // Create and configure mock service
     const mockDatadogService = new MockDatadogService();

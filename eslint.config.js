@@ -11,7 +11,11 @@ export default tseslint.config(
     })),
     {
         rules: {
-            "no-case-declarations": "off"
+            "no-case-declarations": "off",
+            "@typescript-eslint/no-unused-vars": ["error", {
+                argsIgnorePattern: "^_",
+                caughtErrorsIgnorePattern: "^_",
+            }],
         },
     }
 )
