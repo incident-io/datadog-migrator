@@ -35,6 +35,17 @@ export type MigrationResult = {
   validationResults?: MigrationValidation;
 };
 
+// Removes each match with the spaces that separated it, keeping line breaks
+function removeMentions(message: string, pattern: RegExp): string {
+  const mention = `(?:${pattern.source})`;
+  return message
+    .replace(
+      new RegExp(`[ \\t]+${mention}|^${mention}[ \\t]*|${mention}`, "gm"),
+      "",
+    )
+    .trim();
+}
+
 export class MigrationService {
   private datadogService: DatadogService;
   private incidentioConfig: IncidentioConfig;
@@ -675,13 +686,10 @@ export class MigrationService {
               !existingWebhooks.some((webhook) => webhook === `@${webhookName}`)
             ) {
               // Replace existing webhooks with the correct one
-              for (const webhook of existingWebhooks) {
-                newMessage = newMessage
-                  .replace(webhook, "")
-                  .replace(/\s+/g, " ")
-                  .trim();
-              }
-              newMessage = `${newMessage} @${webhookName}`;
+              newMessage = `${removeMentions(
+                newMessage,
+                this.getIncidentioWebhookPattern(),
+              )} @${webhookName}`;
               updated = true;
             } else {
               return {
@@ -752,13 +760,10 @@ export class MigrationService {
             ); // Different webhooks
 
           if (needsUpdate) {
-            // Remove existing webhooks if any
-            for (const webhook of existingWebhooks) {
-              newMessage = newMessage
-                .replace(webhook, "")
-                .replace(/\s+/g, " ")
-                .trim();
-            }
+            newMessage = removeMentions(
+              newMessage,
+              this.getIncidentioWebhookPattern(),
+            );
 
             // Add all expected webhooks
             for (const webhook of expectedWebhooks) {
@@ -794,13 +799,11 @@ export class MigrationService {
           };
         }
 
-        for (const webhook of incidentWebhooks) {
-          newMessage = newMessage
-            .replace(webhook, "")
-            .replace(/\s+/g, " ")
-            .trim();
-          updated = true;
-        }
+        newMessage = removeMentions(
+          newMessage,
+          this.getIncidentioWebhookPattern(),
+        );
+        updated = true;
         break;
 
       case MigrationType.REMOVE_PROVIDER:
@@ -817,10 +820,7 @@ export class MigrationService {
           };
         }
 
-        newMessage = newMessage
-          .replace(serviceRegex, "")
-          .replace(/\s+/g, " ")
-          .trim();
+        newMessage = removeMentions(newMessage, serviceRegex);
         updated = true;
         break;
     }
