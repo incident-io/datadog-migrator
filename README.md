@@ -24,7 +24,6 @@ Learn more about usage in [this Loom](https://www.loom.com/share/1f0a862752054bb
 You can download the latest binary release from the [GitHub Releases](https://github.com/incident-io/datadog-migrator/releases) page.
 
 Choose the appropriate binary for your system:
-
 - **macOS Intel**: `datadog-migrator-macos-x64-VERSION`
 - **macOS Apple Silicon**: `datadog-migrator-macos-arm64-VERSION`
 - **Linux**: `datadog-migrator-linux-x64-VERSION`
