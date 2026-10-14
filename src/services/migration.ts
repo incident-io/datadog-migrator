@@ -683,7 +683,7 @@ export class MigrationService {
               }
               newMessage = `${newMessage} @${webhookName}`;
               updated = true;
-            } else {
+            } else if (!updated) {
               return {
                 updated: false,
                 message: newMessage,
