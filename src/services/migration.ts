@@ -511,14 +511,14 @@ export class MigrationService {
       // Add team field if provided
       if (team) {
         payload += `,
-      "team": "${team}"`;
+      "team": ${JSON.stringify(team)}`;
       }
 
       // Add additional metadata fields if provided
       if (additionalMetadata) {
         for (const [key, value] of Object.entries(additionalMetadata)) {
           payload += `,
-      "${key}": "${value}"`;
+      ${JSON.stringify(key)}: ${JSON.stringify(value)}`;
         }
       }
 
