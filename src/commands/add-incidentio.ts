@@ -79,7 +79,7 @@ export function registerAddIncidentioCommand(program: Command): void {
               !incidentioConfig.webhookPerTeam && incidentioConfig.addTeamTags
                 ? `\n  Team tags will be derived from your ${providerName}-to-team mappings in config.json.`
                 : ""
-            }\n  Continue?`,
+            }\n  ${providerName} mentions stay, so both get alerts until you run remove-provider.\n  Continue?`,
             default: false,
           },
         ]);
