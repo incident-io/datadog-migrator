@@ -1,10 +1,14 @@
+import { test } from "bun:test";
 /**
  * Tests for init-config command
  */
-import { assertEquals } from "https://deno.land/std@0.171.0/testing/asserts.ts";
+import { assertEquals } from "../utils/asserts.ts";
 import { createDefaultConfig } from "../../utils/config.ts";
 import { MockDatadogService } from "../utils/mock-datadog-service.ts";
-import { createOpsgenieMonitor, createPagerDutyMonitor } from "../utils/test-utils.ts";
+import {
+  createOpsgenieMonitor,
+  createPagerDutyMonitor,
+} from "../utils/test-utils.ts";
 import { withMockedEnv } from "../utils/test-stub.ts";
 
 /**
@@ -15,8 +19,7 @@ import { withMockedEnv } from "../utils/test-stub.ts";
  * - There are no mappings by default
  * - additionalMetadata examples are provided in the documentation
  */
-Deno.test("init-config - default config creation", async () => {
-  // deno-lint-ignore require-await
+test("init-config - default config creation", async () => {
   await withMockedEnv(async () => {
     // Create default config
     const defaultConfig = createDefaultConfig();
@@ -57,7 +60,7 @@ Deno.test("init-config - default config creation", async () => {
  * - Each detected service gets a mapping entry in the config
  * - The first service gets an additionalMetadata example
  */
-Deno.test("init-config - PagerDuty service detection", async () => {
+test("init-config - PagerDuty service detection", async () => {
   await withMockedEnv(async () => {
     // Create and configure mock service
     const mockDatadogService = new MockDatadogService();
@@ -116,8 +119,8 @@ Deno.test("init-config - PagerDuty service detection", async () => {
           pagerdutyService: service,
           incidentioTeam: null,
           additionalMetadata: {
-            "priority": "high",
-            "environment": "production",
+            priority: "high",
+            environment: "production",
           },
         });
       } else {
@@ -171,7 +174,7 @@ Deno.test("init-config - PagerDuty service detection", async () => {
  * - Each detected service gets a mapping entry in the config
  * - The first service gets an additionalMetadata example
  */
-Deno.test("init-config - Opsgenie service detection", async () => {
+test("init-config - Opsgenie service detection", async () => {
   await withMockedEnv(async () => {
     // Create and configure mock service
     const mockDatadogService = new MockDatadogService();
@@ -231,8 +234,8 @@ Deno.test("init-config - Opsgenie service detection", async () => {
           opsgenieService: service,
           incidentioTeam: null,
           additionalMetadata: {
-            "priority": "high",
-            "environment": "production",
+            priority: "high",
+            environment: "production",
           },
         });
       } else {
@@ -285,8 +288,7 @@ Deno.test("init-config - Opsgenie service detection", async () => {
  * - The config correctly sets webhookPerTeam to true when team webhooks are selected
  * - The config correctly sets addTeamTags to false when team webhooks are selected
  */
-Deno.test("init-config - team webhook configuration", async () => {
-  // deno-lint-ignore require-await
+test("init-config - team webhook configuration", async () => {
   await withMockedEnv(async () => {
     // Create a config with team-specific webhooks
     const config = createDefaultConfig();
@@ -322,8 +324,7 @@ Deno.test("init-config - team webhook configuration", async () => {
  * - The config correctly sets addTeamTags to true when team tags are enabled
  * - The config correctly sets teamTagPrefix to the specified prefix
  */
-Deno.test("init-config - single webhook with team tags configuration", async () => {
-  // deno-lint-ignore require-await
+test("init-config - single webhook with team tags configuration", async () => {
   await withMockedEnv(async () => {
     // Create a config with single webhook and team tags
     const config = createDefaultConfig();

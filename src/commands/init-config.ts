@@ -1,4 +1,5 @@
-import * as path from "https://deno.land/std/path/mod.ts";
+import * as fs from "node:fs";
+import * as path from "node:path";
 import inquirer from "inquirer";
 import kleur from "kleur";
 import ora from "ora";
@@ -7,47 +8,32 @@ import { createDefaultConfig } from "../utils/config.ts";
 import { DatadogService } from "../services/datadog.ts";
 import { MigrationMapping } from "../types/index.ts";
 import { getServiceRegexForProvider } from "../utils/regex.ts";
-import Denomander from "https://deno.land/x/denomander@0.9.3/src/Denomander.ts";
+import { CommandOptions, setupAuthOptions } from "../utils/command.ts";
+import { Command } from "commander";
 
-const identity: (x: string) => string = (i: string) => i;
-
-export function registerInitConfigCommand(program: Denomander): void {
-  program
-    .command("init")
-    .description("Initialize a new configuration file")
+export function registerInitConfigCommand(program: Command): void {
+  setupAuthOptions(
+    program.command("init").description("Initialize a new configuration file"),
+  )
     .option(
-      "-k, --api-key",
-      "Datadog API key",
-      identity,
-      Deno.env.get("DATADOG_API_KEY"),
-    )
-    .option(
-      "-a, --app-key",
-      "Datadog App key",
-      identity,
-      Deno.env.get("DATADOG_APP_KEY"),
-    )
-    .option(
-      "-p, --path",
-      "Path to save the config file",
-      identity,
-      "./config.json",
+      CommandOptions.path.flag,
+      CommandOptions.path.description,
+      CommandOptions.path.defaultValue,
     )
     .action(
-      async (
-        options: { path: string; "api-key": string; "app-key": string },
-      ) => {
+      async (options: { path: string; apiKey: string; appKey: string }) => {
         try {
           // Check if the file already exists
           const configPath = path.resolve(options.path);
           try {
-            const fileInfo = await Deno.stat(configPath);
-            if (fileInfo.isFile) {
+            const fileInfo = await fs.promises.stat(configPath);
+            if (fileInfo.isFile()) {
               console.log(
                 `File ${options.path} already exists. Overwrite? (y/N)`,
               );
               const answer = prompt("> ");
-              const overwrite = answer?.toLowerCase() === "y" ||
+              const overwrite =
+                answer?.toLowerCase() === "y" ||
                 answer?.toLowerCase() === "yes";
 
               if (!overwrite) {
@@ -65,7 +51,9 @@ export function registerInitConfigCommand(program: Denomander): void {
           // Datadog credentials will be provided as CLI arguments when running commands
 
           // Ask which provider they are migrating from
-          const { provider }: {
+          const {
+            provider,
+          }: {
             provider: "pagerduty" | "opsgenie";
           } = await inquirer.prompt([
             {
@@ -163,9 +151,12 @@ export function registerInitConfigCommand(program: Denomander): void {
 
           // Get incident.io alert source details
           // Check if webhook token is in env
-          const envWebhookToken = Deno.env.get("INCIDENTIO_WEBHOOK_TOKEN");
+          const envWebhookToken = process.env.INCIDENTIO_WEBHOOK_TOKEN;
 
-          const promptQuestions: Parameters<typeof inquirer.prompt> = [
+          const answers = await inquirer.prompt<{
+            webhookUrl: string;
+            webhookToken?: string;
+          }>([
             {
               type: "input",
               name: "webhookUrl",
@@ -175,11 +166,8 @@ export function registerInitConfigCommand(program: Denomander): void {
                   ? true
                   : "Please enter a valid URL (should start with http or https)",
             },
-          ];
-
-          // Only prompt for webhook token if not in environment variable
-          if (!envWebhookToken) {
-            promptQuestions.push({
+            {
+              when: !envWebhookToken,
               type: "input",
               name: "webhookToken",
               message:
@@ -188,23 +176,18 @@ export function registerInitConfigCommand(program: Denomander): void {
                 input
                   ? true
                   : "Please enter the secret token from your incident.io alert source",
-            });
-          }
-
-          // This is fine, it just doesn't like the generic
-          // deno-lint-ignore ban-ts-comment
-          // @ts-expect-error
-          const answers = await inquirer.prompt(promptQuestions);
+            },
+          ]);
           const webhookUrl = answers.webhookUrl;
           const webhookToken = envWebhookToken || answers.webhookToken;
 
-          if (!webhookToken && !envWebhookToken) {
+          if (!webhookToken) {
             console.log(
               kleur.yellow(
                 "\nNo webhook token provided. You can add it to your .env file as INCIDENTIO_WEBHOOK_TOKEN to avoid being prompted for it in the future.",
               ),
             );
-            Deno.exit(1);
+            process.exit(1);
           }
 
           defaultConfig.incidentioConfig.webhookUrl = webhookUrl;
@@ -241,9 +224,8 @@ export function registerInitConfigCommand(program: Denomander): void {
             defaultConfig.incidentioConfig.webhookToken = cleanToken;
           }
 
-          const providerName = provider === "opsgenie"
-            ? "Opsgenie"
-            : "PagerDuty";
+          const providerName =
+            provider === "opsgenie" ? "Opsgenie" : "PagerDuty";
 
           console.log(
             kleur.blue(
@@ -261,13 +243,11 @@ We'll scan for ${providerName} services and add them to your config file.`,
           const spinner = ora("Creating configuration file").start();
 
           try {
-            const dirPath = path.dirname(configPath);
-            const dirExists = await Deno.stat(dirPath).catch(() => false);
-            if (!dirExists) {
-              await Deno.mkdir(dirPath, { recursive: true });
-            }
+            await fs.promises.mkdir(path.dirname(configPath), {
+              recursive: true,
+            });
 
-            Deno.writeTextFileSync(
+            fs.writeFileSync(
               configPath,
               JSON.stringify(defaultConfig, null, 2),
             );
@@ -278,8 +258,8 @@ We'll scan for ${providerName} services and add them to your config file.`,
 
             try {
               const datadogService = new DatadogService({
-                apiKey: options["api-key"],
-                appKey: options["app-key"],
+                apiKey: options.apiKey,
+                appKey: options.appKey,
               });
 
               // Get all monitors to detect PagerDuty services
@@ -305,29 +285,29 @@ We'll scan for ${providerName} services and add them to your config file.`,
               if (detectedServices.length > 0) {
                 // Create mappings for detected services (excluding ones already manually added)
                 const existingServices = new Set(
-                  defaultConfig.mappings.map(
-                    (m: MigrationMapping) =>
-                      provider === "opsgenie"
-                        ? m.opsgenieService
-                        : m.pagerdutyService,
+                  defaultConfig.mappings.map((m: MigrationMapping) =>
+                    provider === "opsgenie"
+                      ? m.opsgenieService
+                      : m.pagerdutyService,
                   ),
                 );
                 const newMappings = [];
 
                 for (const service of detectedServices) {
                   if (!existingServices.has(service)) {
-                    const mappingKey = provider === "opsgenie"
-                      ? "opsgenieService"
-                      : "pagerdutyService";
+                    const mappingKey =
+                      provider === "opsgenie"
+                        ? "opsgenieService"
+                        : "pagerdutyService";
 
-                     // Add an example of additionalMetadata for the first service
+                    // Add an example of additionalMetadata for the first service
                     if (newMappings.length === 0) {
                       defaultConfig.mappings.push({
                         [mappingKey]: service,
                         incidentioTeam: null, // Placeholder for user to fill in
                         additionalMetadata: {
                           // Example metadata - useful for differentiating similar services
-                          "service": service,
+                          service: service,
                         },
                       });
                     } else {
@@ -341,7 +321,7 @@ We'll scan for ${providerName} services and add them to your config file.`,
                 }
 
                 // Update the config file with the new mappings
-                Deno.writeTextFileSync(
+                fs.writeFileSync(
                   configPath,
                   JSON.stringify(defaultConfig, null, 2),
                 );
@@ -374,7 +354,7 @@ We'll scan for ${providerName} services and add them to your config file.`,
                   console.log(
                     "3. With single webhooks, these fields become monitor tags; with team webhooks, they're added to payloads",
                   );
-                  Deno.exit(0);
+                  process.exit(0);
                 }
               } else {
                 console.log(

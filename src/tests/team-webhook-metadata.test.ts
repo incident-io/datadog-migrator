@@ -1,15 +1,20 @@
+import { test } from "bun:test";
 /**
  * Test for additionalMetadata functionality with team-specific webhooks
  * Uses environment stubbing approach
  */
-import { assertEquals, assertStringIncludes } from "https://deno.land/std@0.171.0/testing/asserts.ts";
+import { assertEquals, assertStringIncludes } from "./utils/asserts.ts";
 import { MigrationService } from "../services/migration.ts";
 import { MigrationType } from "../types/index.ts";
-import { createPagerDutyMonitor, createTestConfig, createTestMappings } from "./utils/test-utils.ts";
+import {
+  createPagerDutyMonitor,
+  createTestConfig,
+  createTestMappings,
+} from "./utils/test-utils.ts";
 import { createMockDatadogService } from "./utils/mock-services.ts";
 import { withMockedEnv } from "./utils/test-stub.ts";
 
-Deno.test("additionalMetadata with team-specific webhooks", async () => {
+test("additionalMetadata with team-specific webhooks", async () => {
   await withMockedEnv(async () => {
     // Create a mock service
     const mockService = createMockDatadogService();
@@ -40,7 +45,7 @@ Deno.test("additionalMetadata with team-specific webhooks", async () => {
 
     // Create migration service - cast the mock to any to bypass type checking
     const migrationService = new MigrationService(
-      // deno-lint-ignore no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       mockService as any,
       config,
       mappings,

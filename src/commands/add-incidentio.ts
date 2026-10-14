@@ -1,6 +1,6 @@
 import kleur from "kleur";
 import inquirer from "inquirer";
-import Denomander from "https://deno.land/x/denomander@0.9.3/src/Denomander.ts";
+import { Command } from "commander";
 
 import { debug } from "../utils/config.ts";
 import { MigrationType } from "../types/index.ts";
@@ -18,7 +18,7 @@ import {
   withErrorHandling,
 } from "../utils/command.ts";
 
-export function registerAddIncidentioCommand(program: Denomander): void {
+export function registerAddIncidentioCommand(program: Command): void {
   const command = program
     .command("add-incidentio")
     .description(
@@ -43,7 +43,7 @@ export function registerAddIncidentioCommand(program: Denomander): void {
       const datadogService = createDatadogService(options);
 
       // Create migration service and load config
-      const dryRunMode = options["dry-run"] === true;
+      const dryRunMode = options.dryRun === true;
       const { migrationService, config } = createMigrationService(
         datadogService,
         options.config,
@@ -75,19 +75,18 @@ export function registerAddIncidentioCommand(program: Denomander): void {
           {
             type: "confirm",
             name: "confirmed",
-            message:
-              `This will add ${webhookType}${tagMessage} to monitors with ${providerName} services.${
-                !incidentioConfig.webhookPerTeam && incidentioConfig.addTeamTags
-                  ? `\n  Team tags will be derived from your ${providerName}-to-team mappings in config.json.`
-                  : ""
-              }\n  Continue?`,
+            message: `This will add ${webhookType}${tagMessage} to monitors with ${providerName} services.${
+              !incidentioConfig.webhookPerTeam && incidentioConfig.addTeamTags
+                ? `\n  Team tags will be derived from your ${providerName}-to-team mappings in config.json.`
+                : ""
+            }\n  Continue?`,
             default: false,
           },
         ]);
 
         if (!confirmed) {
           console.log(kleur.yellow("Operation cancelled."));
-          Deno.exit(0);
+          process.exit(0);
         }
 
         spinner.start("Connecting to Datadog API");

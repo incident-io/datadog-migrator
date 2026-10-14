@@ -2,8 +2,13 @@
  * Custom test implementation for MigrationService tests
  */
 import { MigrationService } from "../../services/migration.ts";
-import { DatadogMonitor, IncidentioConfig, MigrationMapping, MigrationType } from "../../types/index.ts";
-import { assertEquals } from "https://deno.land/std@0.171.0/testing/asserts.ts";
+import {
+  DatadogMonitor,
+  IncidentioConfig,
+  MigrationMapping,
+  MigrationType,
+} from "../../types/index.ts";
+import { assertEquals } from "../utils/asserts.ts";
 import { withMockedEnv } from "../utils/test-stub.ts";
 
 // This is a minimal implementation of v1.WebhooksIntegration for mocking
@@ -42,12 +47,10 @@ export class MockDatadogService {
   }
 
   // DatadogService API implementations
-  // deno-lint-ignore require-await
   async getMonitors(): Promise<DatadogMonitor[]> {
     return [...this._monitors];
   }
 
-  // deno-lint-ignore require-await
   async updateMonitor(
     id: number,
     data: Partial<DatadogMonitor>,
@@ -66,21 +69,17 @@ export class MockDatadogService {
     return updatedMonitor;
   }
 
-  // deno-lint-ignore require-await
   async getWebhook(name: string): Promise<MockWebhooksIntegration | null> {
     this.apiCalls.getWebhook.push({ name });
     return this._webhooks[name] || null;
   }
 
-  // deno-lint-ignore require-await
-  async createWebhook(
-    webhook: {
-      name: string;
-      url: string;
-      payload: string;
-      customHeaders?: string;
-    },
-  ): Promise<void> {
+  async createWebhook(webhook: {
+    name: string;
+    url: string;
+    payload: string;
+    customHeaders?: string;
+  }): Promise<void> {
     this.apiCalls.createWebhook.push({
       name: webhook.name,
       url: webhook.url,
@@ -113,7 +112,7 @@ export async function testAdditionalMetadata(
   await withMockedEnv(async () => {
     // Create the migration service with mock dependencies
     const migrationService = new MigrationService(
-      // deno-lint-ignore no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       mockService as any,
       config,
       mappings,

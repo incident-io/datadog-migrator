@@ -4,12 +4,12 @@
 import ora, { Ora } from "ora";
 import { MigrationResult, MigrationService } from "../services/migration.ts";
 import { formatMessageDiff } from "./diff.ts";
-import Denomander from "https://deno.land/x/denomander@0.9.3/src/Denomander.ts";
+import { Command } from "commander";
 import kleur from "kleur";
 
 import { DatadogService } from "../services/datadog.ts";
 import { loadConfig } from "./config.ts";
-import { CommandOptions, identity } from "../types/cli.ts";
+import { CommandOptions } from "../types/cli.ts";
 import { MigrationConfig } from "../types/index.ts";
 
 // Re-export CommandOptions to make it available to command files
@@ -19,12 +19,12 @@ export { CommandOptions };
  * Create a DatadogService instance from command options
  */
 export function createDatadogService(options: {
-  "api-key": string;
-  "app-key": string;
+  apiKey: string;
+  appKey: string;
 }): DatadogService {
   return new DatadogService({
-    apiKey: options["api-key"],
-    appKey: options["app-key"],
+    apiKey: options.apiKey,
+    appKey: options.appKey,
   });
 }
 
@@ -55,9 +55,10 @@ export function createMigrationService(
 /**
  * Get provider information from config (standardized function)
  */
-export function getProviderInfo(
-  config: MigrationConfig,
-): { source: string; displayName: string } {
+export function getProviderInfo(config: MigrationConfig): {
+  source: string;
+  displayName: string;
+} {
   const source = config.incidentioConfig.source || "pagerduty";
   const displayName = source === "opsgenie" ? "Opsgenie" : "PagerDuty";
 
@@ -67,54 +68,39 @@ export function getProviderInfo(
 /**
  * Setup standard command authentication options
  */
-export function setupAuthOptions(command: Denomander): Denomander {
+export function setupAuthOptions(command: Command): Command {
   return command
     .option(
       CommandOptions.apiKey.flag,
       CommandOptions.apiKey.description,
-      identity,
-      Deno.env.get(CommandOptions.apiKey.defaultEnv),
+      process.env[CommandOptions.apiKey.defaultEnv],
     )
     .option(
       CommandOptions.appKey.flag,
       CommandOptions.appKey.description,
-      identity,
-      Deno.env.get(CommandOptions.appKey.defaultEnv),
+      process.env[CommandOptions.appKey.defaultEnv],
     );
 }
 
 /**
  * Setup standard command filter options
  */
-export function setupFilterOptions(command: Denomander): Denomander {
+export function setupFilterOptions(command: Command): Command {
   return command
-    .option(
-      CommandOptions.tags.flag,
-      CommandOptions.tags.description,
-    )
-    .option(
-      CommandOptions.name.flag,
-      CommandOptions.name.description,
-    )
-    .option(
-      CommandOptions.message.flag,
-      CommandOptions.message.description,
-    );
+    .option(CommandOptions.tags.flag, CommandOptions.tags.description)
+    .option(CommandOptions.name.flag, CommandOptions.name.description)
+    .option(CommandOptions.message.flag, CommandOptions.message.description);
 }
 
 /**
  * Setup standard command dry-run and verbose options
  */
-export function setupExecutionOptions(command: Denomander): Denomander {
+export function setupExecutionOptions(command: Command): Command {
   return command
-    .option(
-      CommandOptions.dryRun.flag,
-      CommandOptions.dryRun.description,
-    )
+    .option(CommandOptions.dryRun.flag, CommandOptions.dryRun.description)
     .option(
       CommandOptions.verbose.flag,
       CommandOptions.verbose.description,
-      identity,
       CommandOptions.verbose.defaultValue,
     );
 }
@@ -129,20 +115,18 @@ export function createSpinner(message: string = "Connecting to Datadog API") {
 /**
  * Standard command callback wrapper to handle errors
  */
-export function withErrorHandling<T>(
-  callback: (options: T) => Promise<void>,
-) {
+export function withErrorHandling<T>(callback: (options: T) => Promise<void>) {
   return async (options: T): Promise<void> => {
     try {
       await callback(options);
-      Deno.exit(0);
+      process.exit(0);
     } catch (error) {
       console.error(
         kleur.red(
           `\nError: ${error instanceof Error ? error.message : String(error)}`,
         ),
       );
-      Deno.exit(1);
+      process.exit(1);
     }
   };
 }
@@ -152,13 +136,11 @@ export const displayMigrationResults = (
   type: "add" | "remove",
   result: MigrationResult,
   options: {
-    "dry-run"?: boolean;
+    dryRun?: boolean;
     verbose?: boolean;
   },
 ): void => {
-  spinner.succeed(
-    options["dry-run"] ? "Simulation complete" : "Update complete",
-  );
+  spinner.succeed(options.dryRun ? "Simulation complete" : "Update complete");
 
   // Show results
   console.log(kleur.bold("\nResults:"));
@@ -222,7 +204,7 @@ export const displayMigrationResults = (
     }
   }
 
-  if (options["dry-run"]) {
+  if (options.dryRun) {
     console.log(kleur.cyan("\nThis was a dry run. No changes were made."));
     console.log(kleur.cyan("Run again without --dry-run to apply changes."));
   }

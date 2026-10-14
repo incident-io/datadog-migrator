@@ -1,23 +1,23 @@
 import kleur from "kleur";
 import inquirer from "inquirer";
-import Denomander from "https://deno.land/x/denomander@0.9.3/src/Denomander.ts";
+import { Command } from "commander";
 
 import { MigrationType } from "../types/index.ts";
 import { prepareFilterOptions } from "../types/prepareFilterOptions.ts";
 import { MigrationCommandOptions } from "../types/cli.ts";
-import { 
+import {
   CommandOptions,
-  createDatadogService, 
+  createDatadogService,
   createMigrationService,
   setupAuthOptions,
   setupFilterOptions,
   setupExecutionOptions,
   createSpinner,
   withErrorHandling,
-  displayMigrationResults
+  displayMigrationResults,
 } from "../utils/command.ts";
 
-export function registerRemoveIncidentioCommand(program: Denomander): void {
+export function registerRemoveIncidentioCommand(program: Command): void {
   const command = program
     .command("remove-incidentio")
     .description("Remove incident.io webhooks from monitors");
@@ -26,13 +26,13 @@ export function registerRemoveIncidentioCommand(program: Denomander): void {
   setupAuthOptions(command);
   setupFilterOptions(command);
   setupExecutionOptions(command);
-  
+
   // Add required config option
   command.requiredOption(
     CommandOptions.config.flag,
-    CommandOptions.config.description
+    CommandOptions.config.description,
   );
-  
+
   // Set command action
   command.action(
     withErrorHandling(async (options: MigrationCommandOptions) => {
@@ -40,33 +40,34 @@ export function registerRemoveIncidentioCommand(program: Denomander): void {
       const datadogService = createDatadogService(options);
 
       // Create migration service and load config
-      const dryRunMode = options["dry-run"] === true;
+      const dryRunMode = options.dryRun === true;
       const { migrationService } = createMigrationService(
         datadogService,
         options.config,
-        dryRunMode
+        dryRunMode,
       );
-      
+
       const spinner = createSpinner();
 
       // Confirm action if not in dry run mode
       if (!dryRunMode) {
         spinner.stop();
-        
+
         const { confirmed } = await inquirer.prompt([
           {
             type: "confirm",
             name: "confirmed",
-            message: "This will remove all incident.io webhooks from monitors. Continue?",
+            message:
+              "This will remove all incident.io webhooks from monitors. Continue?",
             default: false,
           },
         ]);
 
         if (!confirmed) {
           console.log(kleur.yellow("Operation cancelled."));
-          Deno.exit(0);
+          process.exit(0);
         }
-        
+
         spinner.start("Connecting to Datadog API");
       }
 
@@ -74,7 +75,7 @@ export function registerRemoveIncidentioCommand(program: Denomander): void {
       spinner.start(
         dryRunMode
           ? "Simulating removal..."
-          : "Removing incident.io webhooks..."
+          : "Removing incident.io webhooks...",
       );
 
       // Prepare filter options if specified
@@ -88,6 +89,6 @@ export function registerRemoveIncidentioCommand(program: Denomander): void {
       });
 
       displayMigrationResults(spinner, "remove", result, options);
-    })
+    }),
   );
 }

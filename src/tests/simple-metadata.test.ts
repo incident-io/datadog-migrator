@@ -1,14 +1,19 @@
+import { test } from "bun:test";
 /**
  * Simple test for additionalMetadata functionality using environment stubbing
  */
-import { assertEquals } from "https://deno.land/std@0.171.0/testing/asserts.ts";
+import { assertEquals } from "./utils/asserts.ts";
 import { MigrationService } from "../services/migration.ts";
 import { MigrationType } from "../types/index.ts";
-import { createPagerDutyMonitor, createTestConfig, createTestMappings } from "./utils/test-utils.ts";
+import {
+  createPagerDutyMonitor,
+  createTestConfig,
+  createTestMappings,
+} from "./utils/test-utils.ts";
 import { createMockDatadogService } from "./utils/mock-services.ts";
 import { withMockedEnv } from "./utils/test-stub.ts";
 
-Deno.test("additionalMetadata - simple test", async () => {
+test("additionalMetadata - simple test", async () => {
   await withMockedEnv(async () => {
     // Create a mock service
     const mockService = createMockDatadogService();
@@ -39,7 +44,7 @@ Deno.test("additionalMetadata - simple test", async () => {
 
     // Create migration service
     const migrationService = new MigrationService(
-      // deno-lint-ignore no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       mockService as any,
       config,
       mappings,

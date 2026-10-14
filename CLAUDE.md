@@ -9,15 +9,18 @@ in the following steps:
 1. `datadog-migrator init` - creates a config file
 2. `datadog-migrator analyze` - shows the progress of a migration and provides stats on the number of monitors
 3. `datadog-migrator add-incidentio` - adds incident.io references to the Datadog monitors
-4. `datadog-migrator remove-pagerduty` - removes PagerDuty references from the Datadog monitors
+4. `datadog-migrator remove-provider` - removes PagerDuty or Opsgenie references from the Datadog monitors
 
 ## Build Commands
-- Build: `yarn build` or `deno task build`
-- Dev: `yarn dev` or `deno task dev`
-- Test: `yarn test` (runs Jest tests)
-- Lint: `yarn lint` (runs ESLint)
-- Format: `yarn format` (runs Prettier and ESLint)
-- Run single test: `yarn test -t 'test name pattern'`
+This is a Bun project (`package.json`, `bun.lock`). The Bun version is pinned to a canary build in `.bun-version`.
+- Install Bun: `npm install -g bun@$(cat .bun-version)`
+- Install dependencies: `bun install`
+- Dev: `bun run dev`
+- Build: `bun run build` (`bun run build:all` cross-compiles all release targets via `scripts/build-all.sh`)
+- Test: `bun run test`; single file: `bun test src/tests/regex.test.ts`; by name: `bun test -t 'pattern'`
+- Type check: `bun check`
+- Lint: `bun lint` (reads `eslint.config.js`)
+- Format: `bun fmt src` (reads `.prettierrc`)
 
 ## Code Style Guidelines
 - TypeScript with strict typing, use explicit types for function params and returns

@@ -1,9 +1,10 @@
-import * as path from "https://deno.land/std/path/mod.ts";
+import * as fs from "node:fs";
+import * as path from "node:path";
 import { MigrationConfig } from "../types/index.ts";
 
 // Global debug logging function
 export function debug(message: string, ...args: unknown[]) {
-  if (Deno.env.get("DEBUG")) {
+  if (process.env.DEBUG) {
     console.log(`[DEBUG] ${message}`, ...args);
   }
 }
@@ -14,19 +15,19 @@ export function loadConfig(filePath: string): MigrationConfig {
 
     // Check if file exists
     try {
-      const fileInfo = Deno.statSync(configPath);
-      if (!fileInfo.isFile) {
+      const fileInfo = fs.statSync(configPath);
+      if (!fileInfo.isFile()) {
         throw new Error(`Path exists but is not a file: ${configPath}`);
       }
     } catch (err) {
       // File doesn't exist
-      if (err instanceof Deno.errors.NotFound) {
+      if ((err as NodeJS.ErrnoException).code === "ENOENT") {
         throw new Error(`Config file not found: ${configPath}`);
       }
       throw err;
     }
 
-    const configContent = Deno.readTextFileSync(configPath);
+    const configContent = fs.readFileSync(configPath, "utf8");
     const config = JSON.parse(configContent) as MigrationConfig;
 
     // Ensure we have default values for required fields
@@ -35,12 +36,12 @@ export function loadConfig(filePath: string): MigrationConfig {
         webhookPerTeam: false,
         webhookUrl: undefined,
         webhookToken: undefined,
-        source: "pagerduty" // Default to PagerDuty if not specified
+        source: "pagerduty", // Default to PagerDuty if not specified
       };
     }
 
     // Check for webhook token in environment and use it if provided
-    const envWebhookToken = Deno.env.get("INCIDENTIO_WEBHOOK_TOKEN");
+    const envWebhookToken = process.env.INCIDENTIO_WEBHOOK_TOKEN;
     if (envWebhookToken) {
       config.incidentioConfig.webhookToken = envWebhookToken;
     }

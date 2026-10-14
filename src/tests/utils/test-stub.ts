@@ -1,29 +1,24 @@
 /**
- * Test utilities for mocking Deno environment functions
+ * Test utilities for mocking environment variables
  */
 
-// Create mock implementation for Deno.env.get
-export function mockEnvGet(key: string): string | undefined {
-  const mockEnv: Record<string, string> = {
-    DEBUG: "true",
-    INCIDENTIO_WEBHOOK_TOKEN: "test-token",
-  };
-  return mockEnv[key];
-}
+const mockEnv: Record<string, string> = {
+  DEBUG: "true",
+  INCIDENTIO_WEBHOOK_TOKEN: "test-token",
+};
 
-// Function to create a mock of Deno.env.get
 export function setupStubs() {
-  // Save original function
-  const originalEnvGet = Deno.env.get;
-  
-  // Replace with mock
-  // @ts-ignore: We know what we're doing
-  Deno.env.get = mockEnvGet;
-  
-  // Return cleanup function
+  const original: Record<string, string | undefined> = {};
+  for (const [key, value] of Object.entries(mockEnv)) {
+    original[key] = process.env[key];
+    process.env[key] = value;
+  }
+
   return () => {
-    // @ts-ignore: We know what we're doing
-    Deno.env.get = originalEnvGet;
+    for (const [key, value] of Object.entries(original)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
   };
 }
 

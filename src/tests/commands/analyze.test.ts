@@ -1,7 +1,8 @@
+import { test } from "bun:test";
 /**
  * Tests for analyze command
  */
-import { assertEquals } from "https://deno.land/std@0.171.0/testing/asserts.ts";
+import { assertEquals } from "../utils/asserts.ts";
 import { MockDatadogService } from "../utils/mock-services.ts";
 import {
   createIncidentioMonitor,
@@ -22,7 +23,7 @@ import { getServiceRegexForProvider } from "../../utils/regex.ts";
  * - Analysis correctly counts monitors with PagerDuty, incident.io, both, or neither
  * - Mapping validation works correctly
  */
-Deno.test("analyze command - with PagerDuty provider", async () => {
+test("analyze command - with PagerDuty provider", async () => {
   await withMockedEnv(async () => {
     // Create and configure mock service
     const mockDatadogService = new MockDatadogService();
@@ -69,24 +70,28 @@ Deno.test("analyze command - with PagerDuty provider", async () => {
     const monitors = await mockDatadogService.getMonitors();
 
     // Count monitors by category
-    const pdOnly = monitors.filter((m) =>
-      m.message.match(providerRegex) &&
-      !m.message.match(/@webhook-incident-io(-\S+)?/g)
+    const pdOnly = monitors.filter(
+      (m) =>
+        m.message.match(providerRegex) &&
+        !m.message.match(/@webhook-incident-io(-\S+)?/g),
     );
 
-    const incidentioOnly = monitors.filter((m) =>
-      !m.message.match(providerRegex) &&
-      m.message.match(/@webhook-incident-io(-\S+)?/g)
+    const incidentioOnly = monitors.filter(
+      (m) =>
+        !m.message.match(providerRegex) &&
+        m.message.match(/@webhook-incident-io(-\S+)?/g),
     );
 
-    const both = monitors.filter((m) =>
-      m.message.match(providerRegex) &&
-      m.message.match(/@webhook-incident-io(-\S+)?/g)
+    const both = monitors.filter(
+      (m) =>
+        m.message.match(providerRegex) &&
+        m.message.match(/@webhook-incident-io(-\S+)?/g),
     );
 
-    const neither = monitors.filter((m) =>
-      !m.message.match(providerRegex) &&
-      !m.message.match(/@webhook-incident-io(-\S+)?/g)
+    const neither = monitors.filter(
+      (m) =>
+        !m.message.match(providerRegex) &&
+        !m.message.match(/@webhook-incident-io(-\S+)?/g),
     );
 
     // Assert monitor counts
@@ -109,7 +114,7 @@ Deno.test("analyze command - with PagerDuty provider", async () => {
         count: pdOnly.length + both.length, // Total monitors with PagerDuty
         services: {
           "api-critical": 1,
-          "database": 1,
+          database: 1,
           "api-non-critical": 1,
         },
       },
@@ -198,7 +203,7 @@ Deno.test("analyze command - with PagerDuty provider", async () => {
  * - Analysis correctly counts monitors with Opsgenie, incident.io, both, or neither
  * - Mapping validation works correctly with missing mappings
  */
-Deno.test("analyze command - with Opsgenie provider and unmapped services", async () => {
+test("analyze command - with Opsgenie provider and unmapped services", async () => {
   await withMockedEnv(async () => {
     // Create and configure mock service
     const mockDatadogService = new MockDatadogService();
@@ -246,24 +251,28 @@ Deno.test("analyze command - with Opsgenie provider and unmapped services", asyn
     const monitors = await mockDatadogService.getMonitors();
 
     // Count monitors by category
-    const opsgenieOnly = monitors.filter((m) =>
-      m.message.match(providerRegex) &&
-      !m.message.match(/@webhook-incident-io(-\S+)?/g)
+    const opsgenieOnly = monitors.filter(
+      (m) =>
+        m.message.match(providerRegex) &&
+        !m.message.match(/@webhook-incident-io(-\S+)?/g),
     );
 
-    const incidentioOnly = monitors.filter((m) =>
-      !m.message.match(providerRegex) &&
-      m.message.match(/@webhook-incident-io(-\S+)?/g)
+    const incidentioOnly = monitors.filter(
+      (m) =>
+        !m.message.match(providerRegex) &&
+        m.message.match(/@webhook-incident-io(-\S+)?/g),
     );
 
-    const both = monitors.filter((m) =>
-      m.message.match(providerRegex) &&
-      m.message.match(/@webhook-incident-io(-\S+)?/g)
+    const both = monitors.filter(
+      (m) =>
+        m.message.match(providerRegex) &&
+        m.message.match(/@webhook-incident-io(-\S+)?/g),
     );
 
-    const neither = monitors.filter((m) =>
-      !m.message.match(providerRegex) &&
-      !m.message.match(/@webhook-incident-io(-\S+)?/g)
+    const neither = monitors.filter(
+      (m) =>
+        !m.message.match(providerRegex) &&
+        !m.message.match(/@webhook-incident-io(-\S+)?/g),
     );
 
     // Assert monitor counts
@@ -286,7 +295,7 @@ Deno.test("analyze command - with Opsgenie provider and unmapped services", asyn
         count: opsgenieOnly.length + both.length, // Total monitors with Opsgenie
         services: {
           "api-critical": 1,
-          "database": 1,
+          database: 1,
           "new-service": 1, // Unmapped service
           "api-non-critical": 1,
         },
@@ -338,7 +347,7 @@ Deno.test("analyze command - with Opsgenie provider and unmapped services", asyn
  * - The name filter correctly filters monitors
  * - The message filter correctly filters monitors
  */
-Deno.test("analyze command - with filters", async () => {
+test("analyze command - with filters", async () => {
   await withMockedEnv(async () => {
     // Create and configure mock service
     const mockDatadogService = new MockDatadogService();
@@ -391,7 +400,7 @@ Deno.test("analyze command - with filters", async () => {
 
     // Filter by tag "service:api"
     const apiMonitors = allMonitors.filter((m) =>
-      m.tags.includes("service:api")
+      m.tags.includes("service:api"),
     );
     assertEquals(
       apiMonitors.length,
@@ -401,7 +410,7 @@ Deno.test("analyze command - with filters", async () => {
 
     // Filter by name containing "API"
     const nameFilteredMonitors = allMonitors.filter((m) =>
-      new RegExp("API", "i").test(m.name)
+      new RegExp("API", "i").test(m.name),
     );
     assertEquals(
       nameFilteredMonitors.length,
@@ -411,7 +420,7 @@ Deno.test("analyze command - with filters", async () => {
 
     // Filter by message containing "pagerduty-api"
     const messageFilteredMonitors = allMonitors.filter((m) =>
-      new RegExp("pagerduty-api", "i").test(m.message)
+      new RegExp("pagerduty-api", "i").test(m.message),
     );
     assertEquals(
       messageFilteredMonitors.length,
