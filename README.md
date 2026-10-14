@@ -239,17 +239,15 @@ DATADOG_APP_KEY=your_app_key_here
 If you want to build the binaries yourself:
 
 1. Clone the repository
-2. Install [Bun](https://bun.sh/docs/installation) if you don't have it already, then run `bun install`
+2. Install the pinned Bun version with `npm install -g bun@$(cat .bun-version)`, then run `bun install`
 3. Build the project with:
    ```bash
    bun run build
    ```
-4. Or build platform-specific binaries:
+4. Or build the release binaries for all platforms:
+
    ```bash
-   bun run build:mac      # macOS Intel
-   bun run build:mac-arm  # macOS Apple Silicon
-   bun run build:linux    # Linux
-   bun run build:windows  # Windows
+   bun run build:all
    ```
 
 The binaries will be available in the `dist` directory.

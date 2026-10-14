@@ -12,15 +12,15 @@ in the following steps:
 4. `datadog-migrator remove-provider` - removes PagerDuty or Opsgenie references from the Datadog monitors
 
 ## Build Commands
-This is a Bun project (`package.json`, `bun.lock`).
-- Install: `bun install`
+This is a Bun project (`package.json`, `bun.lock`). The Bun version is pinned to a canary build in `.bun-version`.
+- Install Bun: `npm install -g bun@$(cat .bun-version)`
+- Install dependencies: `bun install`
 - Dev: `bun run dev`
-- Build: `bun run build` (`bun run build:all` for all release targets)
+- Build: `bun run build` (`bun run build:all` cross-compiles all release targets via `scripts/build-all.sh`)
 - Test: `bun run test`; single file: `bun test src/tests/regex.test.ts`; by name: `bun test -t 'pattern'`
 - Type check: `bun check`
 - Lint: `bun lint` (reads `eslint.config.js`)
 - Format: `bun fmt src` (reads `.prettierrc`)
-- `bun check`, `bun lint` and `bun fmt` need Bun canary until 1.4 (`bun upgrade --canary`)
 
 ## Code Style Guidelines
 - TypeScript with strict typing, use explicit types for function params and returns
