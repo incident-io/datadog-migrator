@@ -126,7 +126,7 @@ Options:
 
 ### remove-provider
 
-Remove PagerDuty or Opsgenie service mentions from monitors:
+Remove PagerDuty or Opsgenie service mentions from monitors. Monitors without an incident.io webhook are skipped, so they keep paging through the old provider:
 
 ```bash
 datadog-migrator remove-provider
