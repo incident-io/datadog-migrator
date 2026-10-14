@@ -691,7 +691,7 @@ export class MigrationService {
                 this.getIncidentioWebhookPattern(),
               )} @${webhookName}`;
               updated = true;
-            } else {
+            } else if (!updated) {
               return {
                 updated: false,
                 message: newMessage,
