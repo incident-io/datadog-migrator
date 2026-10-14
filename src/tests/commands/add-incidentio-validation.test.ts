@@ -1,4 +1,4 @@
-import { test } from "bun:test";
+import { expect, test } from "bun:test";
 /**
  * Tests for add-incidentio command validation behavior
  *
@@ -8,7 +8,7 @@ import { test } from "bun:test";
  * 2. When using team-specific webhooks, all mappings must have team assignments
  * 3. When using single webhook with addTeamTags, all mappings must have team assignments
  */
-import { assertEquals, assertRejects } from "../utils/asserts.ts";
+import { assertEquals } from "../utils/asserts.ts";
 import { MigrationService } from "../../services/migration.ts";
 import type { DatadogService } from "../../services/datadog.ts";
 import { MigrationType } from "../../types/index.ts";
@@ -75,16 +75,13 @@ test("add-incidentio - detects and rejects unmapped PagerDuty services", async (
     );
 
     // Act - attempt to run the migration, expect it to throw
-    await assertRejects(
-      async () => {
-        await migrationService.migrateMonitors({
-          type: MigrationType.ADD_INCIDENTIO_WEBHOOK,
-          dryRun: false,
-        });
-      },
-      Error,
+    await expect(
+      migrationService.migrateMonitors({
+        type: MigrationType.ADD_INCIDENTIO_WEBHOOK,
+        dryRun: false,
+      }),
+    ).rejects.toThrow(
       "Missing mappings for PagerDuty services: unmapped-service",
-      "Should throw an error for unmapped services",
     );
   });
 });
@@ -144,16 +141,13 @@ test("add-incidentio - detects and rejects unmapped Opsgenie services", async ()
     );
 
     // Act - attempt to run the migration, expect it to throw
-    await assertRejects(
-      async () => {
-        await migrationService.migrateMonitors({
-          type: MigrationType.ADD_INCIDENTIO_WEBHOOK,
-          dryRun: false,
-        });
-      },
-      Error,
+    await expect(
+      migrationService.migrateMonitors({
+        type: MigrationType.ADD_INCIDENTIO_WEBHOOK,
+        dryRun: false,
+      }),
+    ).rejects.toThrow(
       "Missing mappings for Opsgenie services: unmapped-service",
-      "Should throw an error for unmapped services",
     );
   });
 });
@@ -284,18 +278,13 @@ test("add-incidentio - requires valid team names with team-specific webhooks", a
     );
 
     // Act - attempt to run the migration, expect it to throw
-    await assertRejects(
-      async () => {
-        await migrationService.migrateMonitors({
-          type: MigrationType.ADD_INCIDENTIO_WEBHOOK,
-          webhookPerTeam: true,
-          dryRun: false,
-        });
-      },
-      Error,
-      "Missing team assignments for: database",
-      "Should throw an error for null team assignments when using team webhooks",
-    );
+    await expect(
+      migrationService.migrateMonitors({
+        type: MigrationType.ADD_INCIDENTIO_WEBHOOK,
+        webhookPerTeam: true,
+        dryRun: false,
+      }),
+    ).rejects.toThrow("Missing team assignments for: database");
   });
 });
 
@@ -354,17 +343,12 @@ test("add-incidentio - requires valid team names with single webhook and addTeam
     );
 
     // Act - attempt to run the migration, expect it to throw
-    await assertRejects(
-      async () => {
-        await migrationService.migrateMonitors({
-          type: MigrationType.ADD_INCIDENTIO_WEBHOOK,
-          webhookPerTeam: false, // Single webhook mode
-          dryRun: false,
-        });
-      },
-      Error,
-      "Missing team assignments for: database",
-      "Should throw an error for null team assignments when using single webhook with addTeamTags",
-    );
+    await expect(
+      migrationService.migrateMonitors({
+        type: MigrationType.ADD_INCIDENTIO_WEBHOOK,
+        webhookPerTeam: false, // Single webhook mode
+        dryRun: false,
+      }),
+    ).rejects.toThrow("Missing team assignments for: database");
   });
 });

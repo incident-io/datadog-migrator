@@ -61,15 +61,11 @@ export class MockDatadogService {
    * Mock implementation of getMonitors
    */
   public async getMonitors(): Promise<DatadogMonitor[]> {
-    try {
-      if (process.env.DEBUG === "true") {
-        console.log(
-          "getMonitors called, returning:",
-          JSON.stringify(this.monitors),
-        );
-      }
-    } catch (_) {
-      // Ignore env errors during testing
+    if (process.env.DEBUG === "true") {
+      console.log(
+        "getMonitors called, returning:",
+        JSON.stringify(this.monitors),
+      );
     }
     return [...this.monitors];
   }
@@ -81,15 +77,11 @@ export class MockDatadogService {
     id: number,
     data: Partial<DatadogMonitor>,
   ): Promise<DatadogMonitor> {
-    try {
-      if (process.env.DEBUG === "true") {
-        console.log(
-          `updateMonitor called for id ${id} with data:`,
-          JSON.stringify(data),
-        );
-      }
-    } catch (_) {
-      // Ignore env errors during testing
+    if (process.env.DEBUG === "true") {
+      console.log(
+        `updateMonitor called for id ${id} with data:`,
+        JSON.stringify(data),
+      );
     }
 
     // Record the call for assertions
@@ -119,12 +111,8 @@ export class MockDatadogService {
    * Mock implementation of getWebhook
    */
   public async getWebhook(name: string): Promise<DatadogWebhook | null> {
-    try {
-      if (process.env.DEBUG === "true") {
-        console.log(`getWebhook called for ${name}`);
-      }
-    } catch (_) {
-      // Ignore env errors during testing
+    if (process.env.DEBUG === "true") {
+      console.log(`getWebhook called for ${name}`);
     }
 
     return this.webhooks[name] || null;
@@ -134,12 +122,8 @@ export class MockDatadogService {
    * Mock implementation of createWebhook
    */
   public async createWebhook(webhook: DatadogWebhook): Promise<void> {
-    try {
-      if (process.env.DEBUG === "true") {
-        console.log(`createWebhook called for ${webhook.name}`);
-      }
-    } catch (_) {
-      // Ignore env errors during testing
+    if (process.env.DEBUG === "true") {
+      console.log(`createWebhook called for ${webhook.name}`);
     }
 
     // Record the call for assertions

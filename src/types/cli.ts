@@ -61,7 +61,6 @@ export const CommandOptions = {
   config: {
     flag: "-c, --config <path>",
     description: "Path to config file",
-    required: true,
   },
 
   // Filter options
@@ -98,6 +97,7 @@ export const CommandOptions = {
   // Init-specific options
   path: {
     flag: "-p, --path <path>",
-    description: "Path to save config file",
+    description: "Path to save the config file",
+    defaultValue: "./config.json",
   },
 };

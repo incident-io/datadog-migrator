@@ -16,7 +16,7 @@ This is a Bun project (`package.json`, `bun.lock`).
 - Install: `bun install`
 - Dev: `bun run dev`
 - Build: `bun run build` (`bun run build:all` for all release targets)
-- Test: `bun run test`; single file: `bun test src/tests/regex_test.ts`; by name: `bun test -t 'pattern'`
+- Test: `bun run test`; single file: `bun test src/tests/regex.test.ts`; by name: `bun test -t 'pattern'`
 - Type check: `bun run typecheck`
 - Lint: `bun lint` (reads `eslint.config.js`)
 - Format: `bun fmt src` (reads `.prettierrc`)

@@ -8,26 +8,17 @@ import { createDefaultConfig } from "../utils/config.ts";
 import { DatadogService } from "../services/datadog.ts";
 import { MigrationMapping } from "../types/index.ts";
 import { getServiceRegexForProvider } from "../utils/regex.ts";
+import { CommandOptions, setupAuthOptions } from "../utils/command.ts";
 import { Command } from "commander";
 
 export function registerInitConfigCommand(program: Command): void {
-  program
-    .command("init")
-    .description("Initialize a new configuration file")
+  setupAuthOptions(
+    program.command("init").description("Initialize a new configuration file"),
+  )
     .option(
-      "-k, --api-key <key>",
-      "Datadog API key",
-      process.env.DATADOG_API_KEY,
-    )
-    .option(
-      "-a, --app-key <key>",
-      "Datadog App key",
-      process.env.DATADOG_APP_KEY,
-    )
-    .option(
-      "-p, --path <path>",
-      "Path to save the config file",
-      "./config.json",
+      CommandOptions.path.flag,
+      CommandOptions.path.description,
+      CommandOptions.path.defaultValue,
     )
     .action(
       async (options: { path: string; apiKey: string; appKey: string }) => {
@@ -162,7 +153,10 @@ export function registerInitConfigCommand(program: Command): void {
           // Check if webhook token is in env
           const envWebhookToken = process.env.INCIDENTIO_WEBHOOK_TOKEN;
 
-          const promptQuestions: Parameters<typeof inquirer.prompt> = [
+          const answers = await inquirer.prompt<{
+            webhookUrl: string;
+            webhookToken?: string;
+          }>([
             {
               type: "input",
               name: "webhookUrl",
@@ -172,11 +166,8 @@ export function registerInitConfigCommand(program: Command): void {
                   ? true
                   : "Please enter a valid URL (should start with http or https)",
             },
-          ];
-
-          // Only prompt for webhook token if not in environment variable
-          if (!envWebhookToken) {
-            promptQuestions.push({
+            {
+              when: !envWebhookToken,
               type: "input",
               name: "webhookToken",
               message:
@@ -185,16 +176,12 @@ export function registerInitConfigCommand(program: Command): void {
                 input
                   ? true
                   : "Please enter the secret token from your incident.io alert source",
-            });
-          }
-
-          // This is fine, it just doesn't like the generic
-          // @ts-expect-error inquirer cannot infer the answer type of a dynamic question list
-          const answers = await inquirer.prompt(promptQuestions);
+            },
+          ]);
           const webhookUrl = answers.webhookUrl;
           const webhookToken = envWebhookToken || answers.webhookToken;
 
-          if (!webhookToken && !envWebhookToken) {
+          if (!webhookToken) {
             console.log(
               kleur.yellow(
                 "\nNo webhook token provided. You can add it to your .env file as INCIDENTIO_WEBHOOK_TOKEN to avoid being prompted for it in the future.",
@@ -256,13 +243,9 @@ We'll scan for ${providerName} services and add them to your config file.`,
           const spinner = ora("Creating configuration file").start();
 
           try {
-            const dirPath = path.dirname(configPath);
-            const dirExists = await fs.promises
-              .stat(dirPath)
-              .catch(() => false);
-            if (!dirExists) {
-              await fs.promises.mkdir(dirPath, { recursive: true });
-            }
+            await fs.promises.mkdir(path.dirname(configPath), {
+              recursive: true,
+            });
 
             fs.writeFileSync(
               configPath,

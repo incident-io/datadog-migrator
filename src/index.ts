@@ -30,9 +30,4 @@ process.on("SIGINT", () => {
   process.exit();
 });
 
-// Show help if no command is provided
-if (process.argv.length <= 2) {
-  program.help();
-}
-
 await program.parseAsync(process.argv);
