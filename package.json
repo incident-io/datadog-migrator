@@ -6,7 +6,6 @@
     "start": "bun src/index.ts",
     "dev": "bun --watch src/index.ts",
     "test": "bun test src/tests/",
-    "typecheck": "tsc --noEmit",
     "build": "bun build src/index.ts --compile --outfile dist/datadog-migrator",
     "build:all": "bun run build:mac && bun run build:mac-arm && bun run build:linux && bun run build:windows",
     "build:mac": "bun build src/index.ts --compile --target=bun-darwin-x64 --outfile dist/datadog-migrator-macos-x64",

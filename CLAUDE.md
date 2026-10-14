@@ -17,10 +17,10 @@ This is a Bun project (`package.json`, `bun.lock`).
 - Dev: `bun run dev`
 - Build: `bun run build` (`bun run build:all` for all release targets)
 - Test: `bun run test`; single file: `bun test src/tests/regex.test.ts`; by name: `bun test -t 'pattern'`
-- Type check: `bun run typecheck`
+- Type check: `bun check`
 - Lint: `bun lint` (reads `eslint.config.js`)
 - Format: `bun fmt src` (reads `.prettierrc`)
-- `bun lint` and `bun fmt` need Bun canary until 1.4 (`bun upgrade --canary`)
+- `bun check`, `bun lint` and `bun fmt` need Bun canary until 1.4 (`bun upgrade --canary`)
 
 ## Code Style Guidelines
 - TypeScript with strict typing, use explicit types for function params and returns
