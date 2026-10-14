@@ -1,6 +1,16 @@
 import { client, v1 } from "@datadog/datadog-api-client";
 import { DatadogMonitor } from "../types/index.ts";
-import { debug } from "../utils/config.ts";
+import { datadogSite, debug } from "../utils/config.ts";
+
+function isForbidden(error: unknown): boolean {
+  return error instanceof client.ApiException && error.code === 403;
+}
+
+function scopeHint(error: unknown, scope: string): string {
+  return isForbidden(error)
+    ? `\nEnsure the Datadog application key has the ${scope} scope.`
+    : "";
+}
 
 interface DatadogWebhook {
   name: string;
@@ -21,15 +31,16 @@ export class DatadogService {
       );
     }
 
-    const site = Deno.env.get("DATADOG_SITE") || "datadoghq.com";
-
     const configuration = client.createConfiguration({
       authMethods: {
         apiKeyAuth: apiKey,
         appKeyAuth: appKey,
       },
     });
-    configuration.setServerVariables({ site });
+    const site = datadogSite();
+    if (site) {
+      configuration.setServerVariables({ site });
+    }
 
     debug("Created Datadog API client configuration");
 
@@ -52,10 +63,9 @@ export class DatadogService {
       }));
     } catch (error) {
       if (error instanceof Error) {
-        const hint = error.message.includes("403")
-          ? "\nEnsure the Datadog application key has the monitors_read scope."
-          : "";
-        throw new Error(`Failed to fetch monitors: ${error.message}${hint}`);
+        throw new Error(
+          `Failed to fetch monitors: ${error.message}${scopeHint(error, "monitors_read")}`,
+        );
       }
       throw error;
     }
@@ -110,10 +120,9 @@ export class DatadogService {
       debug(`Error updating monitor ${id}: ${String(error)}`);
       console.error(`Error updating monitor ${id}:`, error);
       if (error instanceof Error) {
-        const hint = error.message.includes("403")
-          ? "\nEnsure the Datadog application key has the monitors_write scope."
-          : "";
-        throw new Error(`Failed to update monitor ${id}: ${error.message}${hint}`);
+        throw new Error(
+          `Failed to update monitor ${id}: ${error.message}${scopeHint(error, "monitors_write")}`,
+        );
       }
       throw error;
     }
@@ -143,10 +152,9 @@ export class DatadogService {
       debug(`Error creating webhook ${webhook.name}: ${String(error)}`);
       console.error(`Error creating webhook ${webhook.name}:`, error);
       if (error instanceof Error) {
-        const hint = error.message.includes("403")
-          ? "\nEnsure the Datadog application key has the integrations_write scope."
-          : "";
-        throw new Error(`Failed to create webhook ${webhook.name}: ${error.message}${hint}`);
+        throw new Error(
+          `Failed to create webhook ${webhook.name}: ${error.message}${scopeHint(error, "create_webhooks")}`,
+        );
       }
       throw error;
     }
@@ -160,13 +168,10 @@ export class DatadogService {
       });
       return webhook;
     } catch (error) {
-      if (error instanceof Error) {
-        if (error.message.includes("403")) {
-          throw new Error(
-            `Failed to get webhook ${name}: ${error.message}\nEnsure the Datadog application key has the integrations_read scope.`,
-          );
-        }
-        // Treat anything else (404, network hiccup) as "doesn't exist"
+      if (isForbidden(error)) {
+        throw new Error(
+          `Failed to get webhook ${name}: ${(error as Error).message}${scopeHint(error, "integrations_read")}`,
+        );
       }
       debug(`Webhook ${name} not found or error: ${String(error)}`);
       return null;

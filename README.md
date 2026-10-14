@@ -82,7 +82,7 @@ Options:
 - `--path <path>` - Path to save the config file (default: ./config.json)
 
 The application key requires the `monitors_read` scope for service detection during init.
-Set `DATADOG_SITE` if your organisation is not on the default US1 site (`datadoghq.com`).
+Set `DATADOG_SITE` (or `DD_SITE`) if your organisation is not on the default US1 site (`datadoghq.com`).
 
 The init command will:
 
@@ -242,14 +242,14 @@ You can also use environment variables for configuration:
 ```sh
 DATADOG_API_KEY=your_api_key_here
 DATADOG_APP_KEY=your_app_key_here
-DATADOG_SITE=datadoghq.com        # optional; default is datadoghq.com (EU: datadoghq.eu, US3: us3.datadoghq.com, etc.)
+DATADOG_SITE=datadoghq.com        # optional, DD_SITE also works; default is datadoghq.com (EU: datadoghq.eu, US3: us3.datadoghq.com, etc.)
 INCIDENTIO_WEBHOOK_TOKEN=your_webhook_token_here  # optional; overrides webhookToken in config
 ```
 
 The required application key scopes depend on which commands you run:
 
 - `init`, `analyze`: `monitors_read`
-- `add-incidentio`, `remove-incidentio`, `remove-provider`: `monitors_read`, `monitors_write`, `integrations_read`, `integrations_write`
+- `add-incidentio`, `remove-incidentio`, `remove-provider`: `monitors_read`, `monitors_write`, `integrations_read`, `create_webhooks`
 
 ## Building from source
 

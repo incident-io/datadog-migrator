@@ -3,7 +3,7 @@ import inquirer from "inquirer";
 import kleur from "kleur";
 import ora from "ora";
 
-import { createDefaultConfig } from "../utils/config.ts";
+import { createDefaultConfig, datadogSite } from "../utils/config.ts";
 import { DatadogService } from "../services/datadog.ts";
 import { MigrationMapping } from "../types/index.ts";
 import { getServiceRegexForProvider } from "../utils/regex.ts";
@@ -38,7 +38,7 @@ export function registerInitConfigCommand(program: Denomander): void {
         options: { path: string; "api-key": string; "app-key": string },
       ) => {
         try {
-          if (!options["api-key"] || !options["app-key"]) {
+          if (!options.apiKey || !options.appKey) {
             console.error(
               kleur.red(
                 "Error: Datadog API credentials are required to run init.",
@@ -46,17 +46,16 @@ export function registerInitConfigCommand(program: Denomander): void {
             );
             console.error(
               "Set DATADOG_API_KEY and DATADOG_APP_KEY in your environment (or .env file),\n" +
-              "or pass them via --api-key and --app-key.",
+                "or pass them via --api-key and --app-key.",
             );
-            Deno.exit(1);
+            process.exit(1);
           }
 
-          const site = Deno.env.get("DATADOG_SITE") || "datadoghq.com";
+          const site = datadogSite();
           console.log(
-            kleur.blue(`Targeting Datadog site: ${kleur.bold(site)}`) +
-            (Deno.env.get("DATADOG_SITE")
-              ? ""
-              : kleur.dim(" (set DATADOG_SITE to override)"))
+            kleur.blue(
+              `Targeting Datadog site: ${kleur.bold(site ?? "datadoghq.com")}`,
+            ) + (site ? "" : kleur.dim(" (set DATADOG_SITE to override)")),
           );
 
           // Check if the file already exists
