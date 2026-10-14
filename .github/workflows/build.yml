@@ -9,7 +9,8 @@ on:
 
 jobs:
   build:
-    # macOS runner so the darwin binaries can be re-signed with codesign
+    # macOS for codesign: Bun's darwin binaries have an invalid signature that
+    # macOS kills on launch, so they are re-signed ad-hoc below
     runs-on: macos-latest
 
     steps:
